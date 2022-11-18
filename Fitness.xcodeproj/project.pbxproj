@@ -8,12 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		176BBB472927D91E007BED71 /* FitnessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB462927D91E007BED71 /* FitnessApp.swift */; };
-		176BBB492927D91E007BED71 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB482927D91E007BED71 /* ContentView.swift */; };
 		176BBB4B2927D920007BED71 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 176BBB4A2927D920007BED71 /* Assets.xcassets */; };
 		176BBB4E2927D920007BED71 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 176BBB4D2927D920007BED71 /* Preview Assets.xcassets */; };
 		176BBB582927D920007BED71 /* FitnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB572927D920007BED71 /* FitnessTests.swift */; };
 		176BBB622927D920007BED71 /* FitnessUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB612927D920007BED71 /* FitnessUITests.swift */; };
 		176BBB642927D920007BED71 /* FitnessUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB632927D920007BED71 /* FitnessUITestsLaunchTests.swift */; };
+		17D7CA0B2927DCD20071EBB1 /* WorkoutListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D7CA0A2927DCD20071EBB1 /* WorkoutListView.swift */; };
+		17D7CA0D2927DEA00071EBB1 /* PairDevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D7CA0C2927DEA00071EBB1 /* PairDevicesView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,7 +37,6 @@
 /* Begin PBXFileReference section */
 		176BBB432927D91E007BED71 /* Fitness.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fitness.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		176BBB462927D91E007BED71 /* FitnessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessApp.swift; sourceTree = "<group>"; };
-		176BBB482927D91E007BED71 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		176BBB4A2927D920007BED71 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		176BBB4D2927D920007BED71 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		176BBB532927D920007BED71 /* FitnessTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitnessTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -44,6 +44,8 @@
 		176BBB5D2927D920007BED71 /* FitnessUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitnessUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		176BBB612927D920007BED71 /* FitnessUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessUITests.swift; sourceTree = "<group>"; };
 		176BBB632927D920007BED71 /* FitnessUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		17D7CA0A2927DCD20071EBB1 /* WorkoutListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutListView.swift; sourceTree = "<group>"; };
+		17D7CA0C2927DEA00071EBB1 /* PairDevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairDevicesView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,7 +97,8 @@
 			isa = PBXGroup;
 			children = (
 				176BBB462927D91E007BED71 /* FitnessApp.swift */,
-				176BBB482927D91E007BED71 /* ContentView.swift */,
+				17D7CA0A2927DCD20071EBB1 /* WorkoutListView.swift */,
+				17D7CA0C2927DEA00071EBB1 /* PairDevicesView.swift */,
 				176BBB4A2927D920007BED71 /* Assets.xcassets */,
 				176BBB4C2927D920007BED71 /* Preview Content */,
 			);
@@ -257,8 +260,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				176BBB492927D91E007BED71 /* ContentView.swift in Sources */,
+				17D7CA0D2927DEA00071EBB1 /* PairDevicesView.swift in Sources */,
 				176BBB472927D91E007BED71 /* FitnessApp.swift in Sources */,
+				17D7CA0B2927DCD20071EBB1 /* WorkoutListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
