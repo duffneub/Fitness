@@ -13,6 +13,7 @@
 		176BBB622927D920007BED71 /* FitnessUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB612927D920007BED71 /* FitnessUITests.swift */; };
 		176BBB642927D920007BED71 /* FitnessUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB632927D920007BED71 /* FitnessUITestsLaunchTests.swift */; };
 		1787B53829B77F26004B7AB9 /* FitnessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1787B53729B77F26004B7AB9 /* FitnessApp.swift */; };
+		1787B53A29B78104004B7AB9 /* ExerciseListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1787B53929B78104004B7AB9 /* ExerciseListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +43,7 @@
 		176BBB612927D920007BED71 /* FitnessUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessUITests.swift; sourceTree = "<group>"; };
 		176BBB632927D920007BED71 /* FitnessUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		1787B53729B77F26004B7AB9 /* FitnessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessApp.swift; sourceTree = "<group>"; };
+		1787B53929B78104004B7AB9 /* ExerciseListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseListView.swift; sourceTree = "<group>"; };
 		17EA1D8D292ED7C70065470B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		17EA1D96293A4D9E0065470B /* Fitness.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Fitness.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -97,6 +99,7 @@
 				17EA1D96293A4D9E0065470B /* Fitness.entitlements */,
 				17EA1D8D292ED7C70065470B /* Info.plist */,
 				1787B53729B77F26004B7AB9 /* FitnessApp.swift */,
+				1787B53929B78104004B7AB9 /* ExerciseListView.swift */,
 				176BBB4A2927D920007BED71 /* Assets.xcassets */,
 				176BBB4C2927D920007BED71 /* Preview Content */,
 			);
@@ -258,6 +261,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1787B53A29B78104004B7AB9 /* ExerciseListView.swift in Sources */,
 				1787B53829B77F26004B7AB9 /* FitnessApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
