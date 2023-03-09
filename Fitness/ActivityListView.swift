@@ -46,11 +46,14 @@ struct ActivityListView: View {
                 Text(exercise.name)
             }
         }
+        .navigationTitle("Activities")
     }
 }
 
 struct ExerciseListView_Previews: PreviewProvider {
     static var previews: some View {
-        ActivityListView(.default)
+        NavigationStack {
+            ActivityListView(.default)
+        }
     }
 }
