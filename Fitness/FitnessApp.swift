@@ -10,9 +10,13 @@ import SwiftUI
 @main
 struct FitnessApp: App {
     
+    let activities: [Activity] = .default
+    
     var body: some Scene {
         WindowGroup {
-            EmptyView()
+            NavigationStack {
+                ActivityListView(activities)
+            }
         }
     }
 
