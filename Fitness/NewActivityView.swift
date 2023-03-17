@@ -15,6 +15,9 @@ struct NewActivityView: View {
     
     @Environment(\.workouts) @Binding var workouts
     
+    @Environment(\.isPresented) var isPresented
+    @Environment(\.dismiss) var dismiss
+    
     @State var duration: Duration = .milliseconds(0)
     @State var start: Date?
     @State var timer: Timer?
@@ -57,6 +60,13 @@ struct NewActivityView: View {
                     
                     let workout = Workout(activity: activity, start: start!, end: Date())
                     workouts.append(workout)
+                    
+                    if isPresented {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(0.25))
+                            dismiss()
+                        }
+                    }
 
                     return
                 }

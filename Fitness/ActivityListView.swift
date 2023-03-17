@@ -11,16 +11,26 @@ struct ActivityListView: View {
     
     let activities: [Activity]
     
+    @State private var selection: Activity?
+    
     var body: some View {
         List(activities) { activity in
-            NavigationLink(destination: NewActivityView(activity: activity)) {
+            Button {
+                selection = activity
+            } label: {
                 HStack {
                     Image(systemName: activity.image)
                     Text(activity.name)
                 }
+                .foregroundColor(.primary)
             }
         }
         .navigationTitle("Activities")
+        .fullScreenCover(item: $selection) { activity in
+            NavigationStack {
+                NewActivityView(activity: activity)
+            }
+        }
     }
 }
 
