@@ -100,6 +100,10 @@ extension View {
     }
 }
 
+//!!! Start stop pause
+//!!! When stopped, show workout details
+//!!! Then when done looking at workout details, drop presentation
+
 @main
 struct FitnessApp: App {
     

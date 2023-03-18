@@ -18,27 +18,17 @@ struct NewActivityView: View {
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
     
-    @State var duration: Duration = .milliseconds(0)
-    @State var start: Date?
-    @State var timer: Timer?
-    @State var status: Status = .ready
+    @State private var totalDuration: Duration = .milliseconds(0)
+    @State private var accumulatedTime: Duration = .milliseconds(0)
+    @State private var start: Date?
+    @State private var timer: Timer?
+    @State private var status: Status = .ready
     
     enum Status {
         case ready
         case inProgress
+        case paused
         case complete
-        
-        var title: String {
-            switch self {
-            case .ready:
-                return "Start"
-            case .inProgress:
-                return "Stop"
-            case .complete:
-                return "Reset"
-                
-            }
-        }
     }
     
     var body: some View {
@@ -48,38 +38,62 @@ struct NewActivityView: View {
                     Text("Duration")
                         .font(.headline)
                     Spacer()
-                    Text(duration.formatted())
+                    Text(totalDuration.formatted())
                 }
             }
             
             Spacer()
             
-            Button(start == nil ? "Start" : "Stop") {
-                guard start == nil else {
+            switch status {
+            case .ready:
+                Button("Start") {
+                    status = .inProgress
+                }
+            case .inProgress:
+                Button("Pause") {
                     timer?.invalidate()
+                    accumulatedTime = totalDuration
+                    status = .paused
+                }
+                .onAppear {
+                    let now = Date()
+                    start = start ?? now
                     
-                    let workout = Workout(activity: activity, start: start!, end: Date())
-                    workouts.append(workout)
+                    timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
+                        let seconds = Date().timeIntervalSince(now)
+                        totalDuration = accumulatedTime + .seconds(seconds)
+                    }
+                }
+            case .paused:
+                HStack {
+                    Button("Resume") {
+                        status = .inProgress
+                    }
+                    .buttonStyle(BorderedButtonStyle())
                     
-                    if isPresented {
-                        Task { @MainActor in
-                            try? await Task.sleep(for: .seconds(0.25))
-                            dismiss()
+                    Button("Stop") {
+                        status = .complete
+                    }
+                }
+            case .complete:
+                Image(systemName: "checkmark.circle")
+                    .onAppear {
+                        let workout = Workout(activity: activity, start: start!, end: Date())
+                        workouts.append(workout)
+
+                        if isPresented {
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(0.25))
+                                dismiss()
+                            }
                         }
                     }
-
-                    return
-                }
-                
-                start = Date()
-                timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
-                    let seconds = Date().timeIntervalSince(start!)
-                    duration = .seconds(seconds)
-                }
             }
             
         }
         .navigationTitle(activity.name)
+        .buttonStyle(BorderedProminentButtonStyle())
+        .controlSize(.large)
     }
 }
 
