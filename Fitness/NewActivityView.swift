@@ -78,7 +78,7 @@ struct NewActivityView: View {
             case .complete:
                 Image(systemName: "checkmark.circle")
                     .onAppear {
-                        let workout = Workout(activity: activity, start: start!, end: Date())
+                        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: accumulatedTime)
                         workouts.append(workout)
 
                         if isPresented {

@@ -51,16 +51,19 @@ struct Workout: Identifiable {
     let start: Date
     let end: Date
     
-    var duration: Duration {
+    let activeDuration: Duration
+    
+    var totalDuration: Duration {
         let seconds = end.timeIntervalSince(start)
         return .seconds(seconds)
     }
     
-    init(activity: Activity, start: Date, end: Date) {
+    init(activity: Activity, start: Date, end: Date, activeDuration: Duration) {
         self.id = UUID()
         self.activity = activity
         self.start = start
         self.end = end
+        self.activeDuration = activeDuration
     }
     
 }
@@ -99,10 +102,6 @@ extension View {
         environment(\.workouts, workouts)
     }
 }
-
-//!!! Start stop pause
-//!!! When stopped, show workout details
-//!!! Then when done looking at workout details, drop presentation
 
 @main
 struct FitnessApp: App {

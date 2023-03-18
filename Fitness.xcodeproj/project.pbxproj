@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		175AE9B229C5F78D000B8C27 /* WorkoutDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175AE9B129C5F78D000B8C27 /* WorkoutDetailsView.swift */; };
 		176BBB4B2927D920007BED71 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 176BBB4A2927D920007BED71 /* Assets.xcassets */; };
 		176BBB4E2927D920007BED71 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 176BBB4D2927D920007BED71 /* Preview Assets.xcassets */; };
 		176BBB582927D920007BED71 /* FitnessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB572927D920007BED71 /* FitnessTests.swift */; };
@@ -36,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		175AE9B129C5F78D000B8C27 /* WorkoutDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDetailsView.swift; sourceTree = "<group>"; };
 		176BBB432927D91E007BED71 /* Fitness.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fitness.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		176BBB4A2927D920007BED71 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		176BBB4D2927D920007BED71 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				1787B53729B77F26004B7AB9 /* FitnessApp.swift */,
 				1787B53929B78104004B7AB9 /* ActivityListView.swift */,
 				178D80ED29BA25E800DAD172 /* NewActivityView.swift */,
+				175AE9B129C5F78D000B8C27 /* WorkoutDetailsView.swift */,
 				176BBB4A2927D920007BED71 /* Assets.xcassets */,
 				176BBB4C2927D920007BED71 /* Preview Content */,
 			);
@@ -269,6 +272,7 @@
 			files = (
 				1787B53A29B78104004B7AB9 /* ActivityListView.swift in Sources */,
 				178D80EE29BA25E800DAD172 /* NewActivityView.swift in Sources */,
+				175AE9B229C5F78D000B8C27 /* WorkoutDetailsView.swift in Sources */,
 				1787B53829B77F26004B7AB9 /* FitnessApp.swift in Sources */,
 				1771843529C0AC550052CA5C /* WorkoutHistoryView.swift in Sources */,
 			);

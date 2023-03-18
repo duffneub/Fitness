@@ -13,16 +13,21 @@ struct WorkoutHistoryView: View {
     
     var body: some View {
         List(workouts) { workout in
-            HStack {
-                Image(systemName: workout.activity.image)
-                
-                VStack(alignment: .leading) {
-                    Text(workout.activity.name)
-                        .font(.headline)
-                    Text(workout.duration.formatted())
-                        .font(.subheadline)
+            NavigationLink {
+                WorkoutDetailsView(workout: workout)
+            } label: {
+                HStack {
+                    Image(systemName: workout.activity.image)
+                    
+                    VStack(alignment: .leading) {
+                        Text(workout.activity.name)
+                            .font(.headline)
+                        Text(workout.totalDuration.formatted())
+                            .font(.subheadline)
+                    }
                 }
             }
+
         }
         .navigationTitle("Workouts")
     }
@@ -34,8 +39,8 @@ struct WorkoutHistoryView_Previews: PreviewProvider {
             WorkoutHistoryView()
         }
         .workouts(.constant([
-            Workout(activity: .indoorRide, start: Date(), end: Date().addingTimeInterval(60 * 60 + 30 * 60)),
-            Workout(activity: .outdoorRun, start: Date(), end: Date().addingTimeInterval(60 * 45)),
+            Workout(activity: .indoorRide, start: Date(), end: Date().addingTimeInterval(60 * 60 + 30 * 60), activeDuration: .seconds(0)),
+            Workout(activity: .outdoorRun, start: Date(), end: Date().addingTimeInterval(60 * 45), activeDuration: .seconds(0)),
         ]))
     }
 }
