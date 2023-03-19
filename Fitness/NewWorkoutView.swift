@@ -9,6 +9,8 @@ import SwiftUI
 
 struct NewWorkoutView: View {
     
+    @EnvironmentObject var heartRateMonitor: HeartRateMonitor
+    
     let activity: Activity
     
     @Environment(\.addWorkout) var addWorkout
@@ -21,6 +23,8 @@ struct NewWorkoutView: View {
     @State private var start: Date?
     @State private var timer: Timer?
     @State private var status: Status = .ready
+    
+    @State private var heartRate: Int?
     
     enum Status {
         case ready
@@ -37,6 +41,24 @@ struct NewWorkoutView: View {
                         .font(.headline)
                     Spacer()
                     Text(totalDuration.formatted())
+                }
+                
+                HStack {
+                    Text("Heart Rate")
+                        .font(.headline)
+                    Spacer()
+                    switch heartRateMonitor.state {
+                    case .disconnected:
+                        Text("Disconnected")
+                    case .connecting:
+                        Text("Connecting…")
+                    case .connected(let bpm) where bpm == nil:
+                        Text("--")
+                    case .connected(let bpm):
+                        Text("\(bpm!) bpm")
+                    case .disconnecting:
+                        Text("Disconnecting…")
+                    }
                 }
             }
             
@@ -92,6 +114,11 @@ struct NewWorkoutView: View {
         .navigationTitle(activity.name)
         .buttonStyle(BorderedProminentButtonStyle())
         .controlSize(.large)
+        .onAppear {
+            Task {
+                await heartRateMonitor.connect()
+            }
+        }
     }
 }
 
@@ -101,5 +128,34 @@ struct NewWorkoutView_Previews: PreviewProvider {
             NewWorkoutView(activity: .indoorRide)
         }
         .workouts([])
+        .environmentObject(HeartRateMonitor())
     }
+}
+
+class HeartRateMonitor: ObservableObject {
+    
+    enum State {
+        case disconnected
+        case connecting
+        case connected(Int?)
+        case disconnecting
+    }
+    
+    @Published var state: State = .disconnected
+    
+    func connect() async {
+        state = .connecting
+        
+        try? await Task.sleep(for: .seconds(1))
+        
+        state = .connected(nil)
+        
+        try? await Task.sleep(for: .seconds(1))
+        
+        while true {
+            state = .connected((100...180).randomElement()!)
+            try? await Task.sleep(for: .seconds([1.0, 1.5, 2.0, 2.5, 3.0].randomElement()!))
+        }
+    }
+    
 }
