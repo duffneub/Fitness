@@ -13,14 +13,16 @@ struct WorkoutHistoryView: View {
     
     var body: some View {
         List(workouts) { workout in
-            HStack {
-                Image(systemName: workout.activity.image)
-                
-                VStack(alignment: .leading) {
-                    Text(workout.activity.name)
-                        .font(.headline)
-                    Text(workout.totalDuration.formatted())
-                        .font(.subheadline)
+            NavigationLink(value: workout) {
+                HStack {
+                    Image(systemName: workout.activity.image)
+                    
+                    VStack(alignment: .leading) {
+                        Text(workout.activity.name)
+                            .font(.headline)
+                        Text(workout.totalDuration.formatted())
+                            .font(.subheadline)
+                    }
                 }
             }
 
