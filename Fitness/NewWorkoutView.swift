@@ -16,8 +16,6 @@ struct NewWorkoutView: View {
         case complete
     }
     
-    @EnvironmentObject var heartRateMonitor: HeartRateMonitor
-    
     let activity: Activity
     
     @Environment(\.addWorkout) var addWorkout
@@ -48,17 +46,19 @@ struct NewWorkoutView: View {
                     Text("Heart Rate")
                         .font(.headline)
                     Spacer()
-                    switch heartRateMonitor.state {
-                    case .disconnected:
-                        Text("Disconnected")
-                    case .connecting:
-                        Text("Connecting…")
-                    case .connected(let bpm) where bpm == nil:
-                        Text("--")
-                    case .connected(let bpm):
-                        Text("\(bpm!) bpm")
-                    case .disconnecting:
-                        Text("Disconnecting…")
+                    HeartRateMonitor { state in
+                        switch state {
+                        case .disconnected:
+                            Text("Disconnected")
+                        case .connecting:
+                            Text("Connecting…")
+                        case .connected(let bpm) where bpm == nil:
+                            Text("--")
+                        case .connected(let bpm):
+                            Text("\(bpm!) bpm")
+                        case .disconnecting:
+                            Text("Disconnecting…")
+                        }
                     }
                 }
             }
@@ -68,11 +68,6 @@ struct NewWorkoutView: View {
             StartStopControls(status: $status)
         }
         .navigationTitle(activity.name)
-        .onAppear {
-            Task {
-                await heartRateMonitor.connect()
-            }
-        }
         .onChange(of: status) { newStatus in
             switch status {
             case .inProgress:
@@ -192,11 +187,10 @@ struct NewWorkoutView_Previews: PreviewProvider {
             NewWorkoutView(activity: .indoorRide)
         }
         .onAddWorkout { _ in }
-        .environmentObject(HeartRateMonitor())
     }
 }
 
-class HeartRateMonitor: ObservableObject {
+struct HeartRateMonitor<Label: View>: View {
     
     enum State {
         case disconnected
@@ -205,9 +199,22 @@ class HeartRateMonitor: ObservableObject {
         case disconnecting
     }
     
-    @Published var state: State = .disconnected
+    @SwiftUI.State private var state: State = .disconnected
     
-    func connect() async {
+    let label: (State) -> Label
+    
+    init(@ViewBuilder label: @escaping (State) -> Label) {
+        self.label = label
+    }
+    
+    var body: some View {
+        label(state)
+            .task {
+                await connect()
+            }
+    }
+    
+    private func connect() async {
         state = .connecting
         
         try? await Task.sleep(for: .seconds(1))
