@@ -9,7 +9,7 @@ import SwiftUI
 
 struct WorkoutHistoryView: View {
     
-    @Environment(\.workouts) @Binding var workouts
+    @Environment(\.workouts) var workouts
     
     var body: some View {
         List(workouts) { workout in
@@ -38,9 +38,9 @@ struct WorkoutHistoryView_Previews: PreviewProvider {
         NavigationStack {
             WorkoutHistoryView()
         }
-        .workouts(.constant([
+        .workouts([
             Workout(activity: .indoorRide, start: Date(), end: Date().addingTimeInterval(60 * 60 + 30 * 60), activeDuration: .seconds(0)),
             Workout(activity: .outdoorRun, start: Date(), end: Date().addingTimeInterval(60 * 45), activeDuration: .seconds(0)),
-        ]))
+        ])
     }
 }

@@ -85,12 +85,12 @@ extension EnvironmentValues {
 }
 
 private struct WorkoutsKey: EnvironmentKey {
-    static let defaultValue: Binding<[Workout]> = .constant([])
+    static let defaultValue: [Workout] = []
 }
 
 extension EnvironmentValues {
     
-    var workouts: Binding<[Workout]> {
+    var workouts: [Workout] {
         get { self[WorkoutsKey.self] }
         set { self[WorkoutsKey.self] = newValue }
     }
@@ -98,9 +98,40 @@ extension EnvironmentValues {
 }
 
 extension View {
-    func workouts(_ workouts: Binding<[Workout]>) -> some View {
+    func workouts(_ workouts: [Workout]) -> some View {
         environment(\.workouts, workouts)
     }
+}
+
+private struct AddWorkoutKey: EnvironmentKey {
+    static let defaultValue: AddWorkoutAction = .init(action: { _ in fatalError("Unimplemented") })
+}
+
+extension EnvironmentValues {
+    
+    var addWorkout: AddWorkoutAction {
+        get { self[AddWorkoutKey.self] }
+        set { self[AddWorkoutKey.self] = newValue }
+    }
+
+}
+
+struct AddWorkoutAction {
+    
+    let action: (Workout) -> Void
+    
+    func callAsFunction(_ workout: Workout) {
+        action(workout)
+    }
+    
+}
+
+extension View {
+    
+    func onAddWorkout(_ addWorkout: @escaping (Workout) -> Void) -> some View {
+        environment(\.addWorkout, .init(action: addWorkout))
+    }
+    
 }
 
 @main
@@ -148,7 +179,6 @@ struct MainView: View {
                 Label("New Workout", systemImage: "plus")
             }
         }
-        .workouts($workouts)
         .onAppear {
             do {
                 workouts = try workoutStore.get()
@@ -156,9 +186,12 @@ struct MainView: View {
                 print("Failed to load workouts -- \(error)")
             }
         }
-        .onChange(of: workouts) { newValue in
+        .workouts(workouts)
+        .onAddWorkout { workout in
+            workouts.append(workout)
+            
             do {
-                try workoutStore.save(newValue)
+                try workoutStore.save(workouts)
             } catch {
                 print("Failed to save workouts -- \(error)")
             }

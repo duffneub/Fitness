@@ -13,7 +13,7 @@ struct NewActivityView: View {
     
     let activity: Activity
     
-    @Environment(\.workouts) @Binding var workouts
+    @Environment(\.addWorkout) var addWorkout
     
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
@@ -79,7 +79,7 @@ struct NewActivityView: View {
                 Image(systemName: "checkmark.circle")
                     .onAppear {
                         let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: accumulatedTime)
-                        workouts.append(workout)
+                        addWorkout(workout)
 
                         if isPresented {
                             Task { @MainActor in
@@ -102,6 +102,6 @@ struct NewActivityView_Previews: PreviewProvider {
         NavigationStack {
             NewActivityView(activity: .indoorRide)
         }
-        .workouts(.constant([]))
+        .workouts([])
     }
 }
