@@ -95,7 +95,7 @@ struct NewWorkoutView: View {
     }
 }
 
-struct NewActivityView_Previews: PreviewProvider {
+struct NewWorkoutView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
             NewWorkoutView(activity: .indoorRide)
