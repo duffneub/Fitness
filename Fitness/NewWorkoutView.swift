@@ -65,10 +65,52 @@ struct NewWorkoutView: View {
             
             Spacer()
             
+            StartStopControls(status: $status)
+        }
+        .navigationTitle(activity.name)
+        .onAppear {
+            Task {
+                await heartRateMonitor.connect()
+            }
+        }
+        .onChange(of: status) { newStatus in
+            switch status {
+            case .inProgress:
+                startWorkout()
+            case .complete:
+                stopWorkout()
+            case .ready, .paused:
+                break
+            }
+        }
+    }
+    
+    private func startWorkout() {
+        start = start ?? Date()
+    }
+    
+    private func stopWorkout() {
+        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration)
+        addWorkout(workout)
+        
+        if isPresented {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.3))
+                dismiss()
+            }
+        }
+    }
+}
+
+struct StartStopControls: View {
+    
+    @Binding var status: NewWorkoutView.Status
+    
+    var body: some View {
+        Group {
             switch status {
             case .ready:
                 Button("Start") {
-                    start = Date()
                     status = .inProgress
                 }
             case .inProgress:
@@ -87,30 +129,13 @@ struct NewWorkoutView: View {
                     }
                 }
             case .complete:
-                Image(systemName: "checkmark.circle")
-                    .onAppear {
-                        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration)
-                        addWorkout(workout)
-
-                        if isPresented {
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .seconds(0.3))
-                                dismiss()
-                            }
-                        }
-                    }
+                EmptyView()
             }
-            
         }
-        .navigationTitle(activity.name)
         .buttonStyle(BorderedProminentButtonStyle())
         .controlSize(.large)
-        .onAppear {
-            Task {
-                await heartRateMonitor.connect()
-            }
-        }
     }
+    
 }
 
 struct Stopwatch<Label: View>: View {
