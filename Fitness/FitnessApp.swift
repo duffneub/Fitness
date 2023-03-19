@@ -158,19 +158,28 @@ struct FitnessApp: App {
 
 struct MainView: View {
     
+    enum Tab: Hashable {
+        case workoutHistory
+        case newWorkout
+        case foo
+    }
+    
     let activities: [Activity] = Activity.allCases
     
     @State private var workouts: [Workout] = []
     @Environment(\.workoutStore) private var workoutStore
     
+    @State private var tab: Tab = .workoutHistory
+    
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             NavigationStack {
                 WorkoutHistoryView()
             }
             .tabItem {
                 Label("History", systemImage: "clock.arrow.circlepath")
             }
+            .tag(Tab.workoutHistory)
             
             NavigationStack {
                 ActivityListView(activities: activities)
@@ -178,6 +187,7 @@ struct MainView: View {
             .tabItem {
                 Label("New Workout", systemImage: "plus")
             }
+            .tag(Tab.newWorkout)
         }
         .onAppear {
             do {
@@ -189,6 +199,8 @@ struct MainView: View {
         .workouts(workouts)
         .onAddWorkout { workout in
             workouts.append(workout)
+            
+            tab = .workoutHistory
             
             do {
                 try workoutStore.save(workouts)
