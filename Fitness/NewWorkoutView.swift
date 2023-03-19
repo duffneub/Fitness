@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-class WorkoutBuilder: ObservableObject {
+struct NewWorkoutView: View {
     
     enum Status {
         case ready
@@ -16,47 +16,7 @@ class WorkoutBuilder: ObservableObject {
         case complete
     }
     
-    private(set) var totalDuration: Duration = .milliseconds(0)
-    private(set) var status: Status = .ready
-    
-    private(set) var accumulatedTime: Duration = .milliseconds(0)
-    private(set) var startDate: Date?
-    private var timer: Timer?
-    
-    func start() {
-        status = .inProgress
-        startDate = Date()
-        startTimer(startDate!)
-    }
-    
-    func pause() {
-        timer?.invalidate()
-        accumulatedTime = totalDuration
-        status = .paused
-    }
-    
-    func resume() {
-        status = .inProgress
-        startTimer(.init())
-    }
-    
-    func stop() {
-        status = .complete
-    }
-    
-    private func startTimer(_ date: Date) {
-        timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
-            let seconds = Date().timeIntervalSince(date)
-            self.totalDuration = self.accumulatedTime + .seconds(seconds)
-        }
-    }
-    
-}
-
-struct NewWorkoutView: View {
-    
     @EnvironmentObject var heartRateMonitor: HeartRateMonitor
-    @EnvironmentObject var workoutBuilder: WorkoutBuilder
     
     let activity: Activity
     
@@ -67,12 +27,10 @@ struct NewWorkoutView: View {
     
     @State private var heartRate: Int?
     
-    enum Status {
-        case ready
-        case inProgress
-        case paused
-        case complete
-    }
+    @State private var start: Date?
+    
+    @State private var status: Status = .ready
+    @State private var duration: Duration = .milliseconds(0)
     
     var body: some View {
         VStack {
@@ -81,7 +39,9 @@ struct NewWorkoutView: View {
                     Text("Duration")
                         .font(.headline)
                     Spacer()
-                    Text(workoutBuilder.totalDuration.formatted())
+                    Stopwatch(duration: $duration, isRunning: status == .inProgress) {
+                        Text(duration.formatted())
+                    }
                 }
                 
                 HStack {
@@ -105,30 +65,31 @@ struct NewWorkoutView: View {
             
             Spacer()
             
-            switch workoutBuilder.status {
+            switch status {
             case .ready:
                 Button("Start") {
-                    workoutBuilder.start()
+                    start = Date()
+                    status = .inProgress
                 }
             case .inProgress:
                 Button("Pause") {
-                    workoutBuilder.pause()
+                    status = .paused
                 }
             case .paused:
                 HStack {
                     Button("Resume") {
-                        workoutBuilder.resume()
+                        status = .inProgress
                     }
                     .buttonStyle(BorderedButtonStyle())
                     
                     Button("Stop") {
-                        workoutBuilder.stop()
+                        status = .complete
                     }
                 }
             case .complete:
                 Image(systemName: "checkmark.circle")
                     .onAppear {
-                        let workout = Workout(activity: activity, start: workoutBuilder.startDate!, end: Date(), activeDuration: workoutBuilder.accumulatedTime)
+                        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration)
                         addWorkout(workout)
 
                         if isPresented {
@@ -152,6 +113,54 @@ struct NewWorkoutView: View {
     }
 }
 
+struct Stopwatch<Label: View>: View {
+    
+    @Binding var duration: Duration
+    var isRunning: Bool
+    let label: () -> Label
+    
+    @State private var accumulatedTime: Duration
+    @State private var timer: Timer?
+    
+    init(
+        duration: Binding<Duration>,
+        isRunning: Bool,
+        @ViewBuilder label: @escaping () -> Label
+    ) {
+        self._duration = duration
+        self.isRunning = isRunning
+        self.label = label
+        
+        _accumulatedTime = .init(initialValue: duration.wrappedValue)
+    }
+    
+    var body: some View {
+        label()
+            .onChange(of: isRunning) { isRunning in
+                guard isRunning else {
+                    pause()
+                    return
+                }
+                
+                resume()
+            }
+    }
+    
+    private func resume() {
+        let now = Date()
+        timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
+            let seconds = Date().timeIntervalSince(now)
+            self.duration = self.accumulatedTime + .seconds(seconds)
+        }
+    }
+    
+    private func pause() {
+        timer?.invalidate()
+        accumulatedTime = duration
+    }
+    
+}
+
 struct NewWorkoutView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
@@ -159,7 +168,6 @@ struct NewWorkoutView_Previews: PreviewProvider {
         }
         .onAddWorkout { _ in }
         .environmentObject(HeartRateMonitor())
-        .environmentObject(WorkoutBuilder())
     }
 }
 
