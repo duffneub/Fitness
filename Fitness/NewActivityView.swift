@@ -83,7 +83,7 @@ struct NewActivityView: View {
 
                         if isPresented {
                             Task { @MainActor in
-                                try? await Task.sleep(for: .seconds(0.25))
+                                try? await Task.sleep(for: .seconds(0.3))
                                 dismiss()
                             }
                         }

@@ -70,6 +70,7 @@ struct Workout: Identifiable {
 
 extension Workout: Equatable {}
 extension Workout: Codable {}
+extension Workout: Hashable {}
 
 private struct WorkoutStoreKey: EnvironmentKey {
     static let defaultValue: Store<Workout> = .unimplemented
@@ -170,10 +171,11 @@ struct MainView: View {
     @Environment(\.workoutStore) private var workoutStore
     
     @State private var tab: Tab = .workoutHistory
+    @State private var navigationPath = NavigationPath()
     
     var body: some View {
         TabView(selection: $tab) {
-            NavigationStack {
+            NavigationStack(path: $navigationPath) {
                 WorkoutHistoryView()
             }
             .tabItem {
@@ -201,6 +203,8 @@ struct MainView: View {
             workouts.append(workout)
             
             tab = .workoutHistory
+            navigationPath = .init()
+            navigationPath.append(workout)
             
             do {
                 try workoutStore.save(workouts)

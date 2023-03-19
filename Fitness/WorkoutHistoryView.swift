@@ -13,23 +13,22 @@ struct WorkoutHistoryView: View {
     
     var body: some View {
         List(workouts) { workout in
-            NavigationLink {
-                WorkoutDetailsView(workout: workout)
-            } label: {
-                HStack {
-                    Image(systemName: workout.activity.image)
-                    
-                    VStack(alignment: .leading) {
-                        Text(workout.activity.name)
-                            .font(.headline)
-                        Text(workout.totalDuration.formatted())
-                            .font(.subheadline)
-                    }
+            HStack {
+                Image(systemName: workout.activity.image)
+                
+                VStack(alignment: .leading) {
+                    Text(workout.activity.name)
+                        .font(.headline)
+                    Text(workout.totalDuration.formatted())
+                        .font(.subheadline)
                 }
             }
 
         }
         .navigationTitle("Workouts")
+        .navigationDestination(for: Workout.self) { workout in
+            WorkoutDetailsView(workout: workout)
+        }
     }
 }
 
