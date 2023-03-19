@@ -177,6 +177,7 @@ struct MainView: View {
         TabView(selection: $tab) {
             NavigationStack(path: $navigationPath) {
                 WorkoutHistoryView()
+                    .workouts(workouts)
             }
             .tabItem {
                 Label("History", systemImage: "clock.arrow.circlepath")
@@ -185,6 +186,19 @@ struct MainView: View {
             
             NavigationStack {
                 ActivityListView(activities: activities)
+                    .onAddWorkout { workout in
+                        workouts.append(workout)
+                        
+                        tab = .workoutHistory
+                        navigationPath = .init()
+                        navigationPath.append(workout)
+                        
+                        do {
+                            try workoutStore.save(workouts)
+                        } catch {
+                            print("Failed to save workouts -- \(error)")
+                        }
+                    }
             }
             .tabItem {
                 Label("New Workout", systemImage: "plus")
@@ -196,20 +210,6 @@ struct MainView: View {
                 workouts = try workoutStore.get()
             } catch {
                 print("Failed to load workouts -- \(error)")
-            }
-        }
-        .workouts(workouts)
-        .onAddWorkout { workout in
-            workouts.append(workout)
-            
-            tab = .workoutHistory
-            navigationPath = .init()
-            navigationPath.append(workout)
-            
-            do {
-                try workoutStore.save(workouts)
-            } catch {
-                print("Failed to save workouts -- \(error)")
             }
         }
     }
