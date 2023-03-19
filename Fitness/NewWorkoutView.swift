@@ -1,5 +1,5 @@
 //
-//  NewActivityView.swift
+//  NewWorkoutView.swift
 //  Fitness
 //
 //  Created by Duff Neubauer on 3/9/23.
@@ -7,9 +7,7 @@
 
 import SwiftUI
 
-
-
-struct NewActivityView: View {
+struct NewWorkoutView: View {
     
     let activity: Activity
     
@@ -100,7 +98,7 @@ struct NewActivityView: View {
 struct NewActivityView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
-            NewActivityView(activity: .indoorRide)
+            NewWorkoutView(activity: .indoorRide)
         }
         .workouts([])
     }

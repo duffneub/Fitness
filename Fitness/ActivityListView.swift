@@ -28,7 +28,7 @@ struct ActivityListView: View {
         .navigationTitle("Activities")
         .fullScreenCover(item: $selection) { activity in
             NavigationStack {
-                NewActivityView(activity: activity)
+                NewWorkoutView(activity: activity)
             }
         }
     }
