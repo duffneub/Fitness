@@ -173,6 +173,8 @@ struct MainView: View {
     @State private var tab: Tab = .workoutHistory
     @State private var navigationPath = NavigationPath()
     
+    @StateObject var bluetoothManager = BluetoothManager()
+    
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack(path: $navigationPath) {
@@ -199,6 +201,7 @@ struct MainView: View {
                             print("Failed to save workouts -- \(error)")
                         }
                     }
+                    .sensorStore(.bluetooth(bluetoothManager))
             }
             .tabItem {
                 Label("New Workout", systemImage: "plus")

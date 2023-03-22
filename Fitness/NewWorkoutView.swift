@@ -90,163 +90,48 @@ struct NewWorkoutView: View {
     }
 }
 
-struct Device {
-    let id: UUID
-    let name: String
-}
-
-extension Device: Identifiable {}
-
-func findHeartRateMonitors() -> AsyncStream<Device> {
-    .init { continuation in
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1))
-            continuation.yield(.init(id: UUID(), name: "Wahoo Tickr"))
-            
-            try? await Task.sleep(for: .seconds(1))
-            continuation.yield(.init(id: UUID(), name: "Polar H9"))
-            
-            try? await Task.sleep(for: .seconds(1))
-            continuation.yield(.init(id: UUID(), name: "Scosche Rhythm24"))
-            
-            continuation.finish()
-        }
-    }
-}
-
 struct FindDevicesView: View {
     
 //    @Binding var selectedDevice: Device
-    @State private var peripheralMap: [UUID: CBPeripheral] = [:]
+    @State private var sensorMap: [UUID: Sensor] = [:]
     
-    var peripherals: [CBPeripheral] {
-        Array(peripheralMap.values)
+    var sensors: [Sensor] {
+        Array(sensorMap.values)
     }
     
-    @StateObject var bluetoothManager = BluetoothManager()
+    @Environment(\.sensorStore) var sensorStore
     
     var body: some View {
-        List(peripherals, id: \.identifier) { peripheral in
-            Text(peripheral.name!)
+        List(sensors) { sensor in
+            Text(sensor.name)
         }
         .navigationTitle("Devices…")
         .task {
-            for await peripheral in bluetoothManager.scanForPeripherals(withServices: [.heartRateMonitor]) {
-                peripheralMap[peripheral.identifier] = peripheral
+            for await sensor in sensorStore.sensors(withServices: [.heartRate]) {
+                sensorMap[sensor.id] = sensor
             }
         }
-        .onDisappear {
-            bluetoothManager.stopScan()
-        }
+        .menuStyle(.automatic)
     }
     
 }
 
-import CoreBluetooth
-
-final class BluetoothManager: NSObject, ObservableObject {
-
-    private var central: CBCentralManager!
-    private var stateContinuation: CheckedContinuation<CBManagerState, Never>?
-    private var scanContinuation: AsyncStream<CBPeripheral>.Continuation?
+struct Sensor: Identifiable {
     
-    var state: CBManagerState {
-        get async {
-            switch central.state {
-            case .unknown, .resetting:
-                return await withCheckedContinuation { continuation in
-                    self.stateContinuation = continuation
-                }
-            case .unsupported, .unauthorized, .poweredOff, .poweredOn:
-                return central.state
-            @unknown default:
-                fatalError("Unhandled: \(central.state)")
-            }
-        }
-    }
-
-    override init() {
-        super.init()
-
-        central = CBCentralManager(delegate: self, queue: nil)
+    enum Service {
+        case heartRate
     }
     
-    func scanForPeripherals(
-        withServices serviceUUIDs: [CBUUID]?, options: [String : Any]? = nil
-    ) -> AsyncStream<CBPeripheral> {
-        .init { continuation in
-            self.scanContinuation = continuation
-            Task {
-                guard await state == .poweredOn else {
-                    continuation.finish()
-                    return
-                }
-                
-                central.scanForPeripherals(withServices: serviceUUIDs, options: options)
-            }
-        }
-    }
+    let id: UUID
+    let name: String
+    let services: [Service]
     
-    func stopScan() {
-        central.stopScan()
-    }
-
 }
 
-extension BluetoothManager: CBCentralManagerDelegate {
-
-    func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        switch central.state {
-        case .poweredOff:
-            print("Powered Off")
-        case .poweredOn:
-            print("Powered On")
-        case .resetting:
-            print("Resetting")
-        case .unauthorized:
-            print("Unauthorized")
-        case .unknown:
-            print("Unknown")
-        case .unsupported:
-            print("Unsupported")
-        @unknown default:
-            print("Some new unknown")
-        }
-        
-        stateContinuation?.resume(returning: central.state)
-    }
+extension SensorStore where Self == PreviewSensorStore {
     
-    func centralManager(
-        _ central: CBCentralManager,
-        didDiscover peripheral: CBPeripheral,
-        advertisementData: [String : Any],
-        rssi RSSI: NSNumber
-    ) {
-        scanContinuation?.yield(peripheral)
-    }
-
-}
-
-extension CBUUID {
+    static var preview: Self { Self() }
     
-    static let heartRateMonitor = CBUUID(string: "0x180D")
-//    static let cyclingPower = CBUUID(string: "0x1818")
-//    static let cyclingSpeedCadence = CBUUID(string: "0x1816")
-//    static let runningSpeedCadence = CBUUID(string: "0x1814")
-//
-//
-//    static let heartRateMeasurement = CBUUID(string: "0x2A37")
-//
-//    static let cyclingPowerMeasurement = CBUUID(string: "0x2A63")
-//    static let cyclingPowerFeature = CBUUID(string: "0x2A65")
-//    static let sensorLocation = CBUUID(string: "0x2A5D")
-//    static let cyclingPowerControlPoint = CBUUID(string: "0x2A66")
-//
-//    static let cscMeasurement = CBUUID(string: "0x2A5C")
-//    static let cscFeature = CBUUID(string: "0x2A5B")
-//
-//    static let rscMeasurement = CBUUID(string: "0x2A53")
-//    static let rscFeature = CBUUID(string: "0x2A54")
 }
 
 struct StartStopControls: View {
@@ -333,15 +218,6 @@ struct Stopwatch<Label: View>: View {
     
 }
 
-struct NewWorkoutView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack(path: .constant(.init([1]))) {
-            NewWorkoutView(activity: .indoorRide)
-        }
-        .onAddWorkout { _ in }
-    }
-}
-
 struct HeartRateMonitor<Label: View>: View {
     
     enum State {
@@ -378,6 +254,37 @@ struct HeartRateMonitor<Label: View>: View {
         while true {
             state = .connected((100...180).randomElement()!)
             try? await Task.sleep(for: .seconds([1.0, 1.5, 2.0, 2.5, 3.0].randomElement()!))
+        }
+    }
+    
+}
+
+// MARK: - Preview
+
+struct NewWorkoutView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack(path: .constant(.init([1]))) {
+            NewWorkoutView(activity: .indoorRide)
+        }
+        .onAddWorkout { _ in }
+        .sensorStore(.preview)
+    }
+}
+
+struct PreviewSensorStore: SensorStore {
+    
+    let sensors: [Sensor] = [
+        Sensor(id: UUID(), name: "Wahoo Tickr", services: [.heartRate]),
+        Sensor(id: UUID(), name: "Polar H9", services: [.heartRate]),
+        Sensor(id: UUID(), name: "Scosche Rhythm24", services: [.heartRate]),
+    ]
+    
+    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
+        var iterator = sensors.makeIterator()
+
+        return AsyncStream {
+            try? await Task.sleep(for: .seconds(1))
+            return iterator.next()
         }
     }
     
