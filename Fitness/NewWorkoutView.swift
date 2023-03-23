@@ -112,8 +112,6 @@ struct SensorView: View {
     let sensor: Sensor
     let service: Sensor.Service
     
-    @StateObject var manager = BluetoothManager.shared
-    
     var body: some View {
         ProgressView()
             .task {
@@ -137,8 +135,6 @@ struct SensorView: View {
             .onAppear {
                 
                 print("Sensor: \(sensor)")
-                
-                manager.foo(sensor, service: service)
             }
         
         // Get characteristic from Sensor.Service
@@ -251,12 +247,6 @@ struct Sensor: Identifiable {
 
 extension Sensor: Equatable {}
 extension Sensor.Service: Equatable {}
-
-extension SensorStore where Self == PreviewSensorStore {
-    
-    static var preview: Self { Self() }
-    
-}
 
 struct StartStopControls: View {
     
@@ -419,5 +409,11 @@ struct PreviewSensorStore: SensorStore {
     func disconnect(from sensor: Sensor) async throws {
         try await Task.sleep(for: .seconds(1))
     }
+    
+}
+
+extension SensorStore where Self == PreviewSensorStore {
+    
+    static var preview: Self { Self() }
     
 }
