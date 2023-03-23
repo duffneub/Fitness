@@ -173,7 +173,7 @@ struct MainView: View {
     @State private var tab: Tab = .workoutHistory
     @State private var navigationPath = NavigationPath()
     
-    @StateObject var bluetoothManager = BluetoothManager()
+    @StateObject var bluetoothManager = BluetoothManager.shared
     
     var body: some View {
         TabView(selection: $tab) {

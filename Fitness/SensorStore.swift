@@ -10,12 +10,22 @@ import SwiftUI
 protocol SensorStore {
     
     func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor>
+    func connect(to sensor: Sensor) async throws
+    func disconnect(from sensor: Sensor) async throws
     
 }
 
 struct DefaultSensorStore: SensorStore {
     
     func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
+        fatalError("`\(Self.self).\(#function)` is unimplemented")
+    }
+    
+    func connect(to sensor: Sensor) async throws {
+        fatalError("`\(Self.self).\(#function)` is unimplemented")
+    }
+    
+    func disconnect(from sensor: Sensor) async throws {
         fatalError("`\(Self.self).\(#function)` is unimplemented")
     }
     

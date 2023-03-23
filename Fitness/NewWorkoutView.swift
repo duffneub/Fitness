@@ -23,6 +23,7 @@ struct NewWorkoutView: View {
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
     
+    @State private var selectedSensor: Sensor?
     @State private var heartRate: Int?
     
     @State private var start: Date?
@@ -42,13 +43,32 @@ struct NewWorkoutView: View {
                     }
                 }
                 
-                NavigationLink(value: 1) {
-                    HStack {
-                        Text("Heart Rate")
-                            .font(.headline)
-                        Spacer()
-                        
-                        Text("Search")
+                NavigationLink {
+                    FindDevicesView(selection: $selectedSensor)
+                    
+//                    !! What if this connects?
+//                    !! Could it return some new "service" store that plugs into SensorView?
+                } label: {
+                    if let sensor = selectedSensor {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("Heart Rate")
+                                    .font(.headline)
+                                Text(sensor.name)
+                                    .font(.caption)
+                            }
+                            Spacer()
+                            
+                            SensorView(sensor: sensor, service: .heartRate)
+                        }
+                    } else {
+                        HStack {
+                            Text("Heart Rate")
+                                .font(.headline)
+                            Spacer()
+                            
+                            Text("Search")
+                        }
                     }
                 }
             }
@@ -56,9 +76,6 @@ struct NewWorkoutView: View {
             Spacer()
             
             StartStopControls(status: $status)
-        }
-        .navigationDestination(for: Int.self) { _ in
-            FindDevicesView()
         }
         .navigationTitle(activity.name)
         .onChange(of: status) { newStatus in
@@ -90,9 +107,60 @@ struct NewWorkoutView: View {
     }
 }
 
+struct SensorView: View {
+    
+    let sensor: Sensor
+    let service: Sensor.Service
+    
+    @StateObject var manager = BluetoothManager.shared
+    
+    var body: some View {
+        ProgressView()
+            .task {
+//                !! Does this service store have everything already discovered?
+//                !! Then we're just observing values for a service?
+//                !! Is sensor a store?
+//                !! Sensor can be a value and a store right? Cause SensorScanner is
+//
+//                for await value in sensor.value(for: service) {
+                    // connect
+                    
+                    // discover service
+                    
+                    // discover characteristc on service
+                    
+                    // notify
+                    
+                    // disconnect on cancel
+//                }
+            }
+            .onAppear {
+                
+                print("Sensor: \(sensor)")
+                
+                manager.foo(sensor, service: service)
+            }
+        
+        // Get characteristic from Sensor.Service
+        // Observe changes
+        // Convert value to string
+        
+        // get peripheral
+            // retirve peripheral with UUID
+            // connect to peripheral
+            // discover service
+            // discover char
+        // observe value for a characteristic
+            // notify
+        // convert value to string
+            // ?
+    }
+    
+}
+
 struct FindDevicesView: View {
     
-//    @Binding var selectedDevice: Device
+    @Binding var selection: Sensor?
     @State private var sensorMap: [UUID: Sensor] = [:]
     
     var sensors: [Sensor] {
@@ -103,7 +171,51 @@ struct FindDevicesView: View {
     
     var body: some View {
         List(sensors) { sensor in
-            Text(sensor.name)
+            Button {
+                Task {
+                    
+                    if sensor.state == .disconnected {
+                        sensorMap[sensor.id]?.state = .connecting
+                        do {
+                            try await sensorStore.connect(to: sensor)
+                            sensorMap[sensor.id]?.state = .connected
+                            selection = sensor
+                        } catch {
+                            print("Failed to connect to '\(sensor.name)' -- \(error)")
+                            sensorMap[sensor.id]?.state = .disconnected
+                        }
+                    } else {
+                        sensorMap[sensor.id]?.state = .disconnecting
+                        do {
+                            try await sensorStore.disconnect(from: sensor)
+                            sensorMap[sensor.id]?.state = .disconnected
+                            selection = nil
+                        } catch {
+                            print("Failed to connect to '\(sensor.name)' -- \(error)")
+                            sensorMap[sensor.id]?.state = .connected
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(sensor.name)
+                    Spacer()
+                    
+                    switch sensor.state {
+                    case .disconnected:
+                        EmptyView()
+                    case .connecting:
+                        ProgressView()
+                    case .connected:
+                        Image(systemName: "checkmark")
+                            .foregroundColor(.accentColor)
+                    case .disconnecting:
+                        EmptyView()
+                    }
+                }
+            }
+            .foregroundColor(.primary)
+                
         }
         .navigationTitle("Devices…")
         .task {
@@ -122,11 +234,23 @@ struct Sensor: Identifiable {
         case heartRate
     }
     
+    enum State {
+        case disconnected
+        case connecting
+        case connected
+        case disconnecting
+    }
+    
     let id: UUID
     let name: String
     let services: [Service]
     
+    var state: State = .disconnected
+    
 }
+
+extension Sensor: Equatable {}
+extension Sensor.Service: Equatable {}
 
 extension SensorStore where Self == PreviewSensorStore {
     
@@ -263,7 +387,7 @@ struct HeartRateMonitor<Label: View>: View {
 
 struct NewWorkoutView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationStack(path: .constant(.init([1]))) {
+        NavigationStack {
             NewWorkoutView(activity: .indoorRide)
         }
         .onAddWorkout { _ in }
@@ -286,6 +410,14 @@ struct PreviewSensorStore: SensorStore {
             try? await Task.sleep(for: .seconds(1))
             return iterator.next()
         }
+    }
+    
+    func connect(to sensor: Sensor) async throws {
+        try await Task.sleep(for: .seconds(1))
+    }
+    
+    func disconnect(from sensor: Sensor) async throws {
+        try await Task.sleep(for: .seconds(1))
     }
     
 }
