@@ -43,6 +43,47 @@ class BluetoothStore: NSObject {
     
 }
 
+extension BluetoothStore {
+    
+    func peripherals(withServices serviceUUIDs: [CBUUID]?, options: [String : Any]? = nil) -> AsyncStream<CBPeripheral> {
+        AsyncStream<CBPeripheral> { continuation in
+            self.scanContinuation?.finish()
+            self.scanContinuation = continuation
+            Task {
+                guard await state == .poweredOn else {
+                    continuation.finish()
+                    return
+                }
+
+                print("Start scan")
+                central.scanForPeripherals(withServices: serviceUUIDs)
+            }
+        }
+        .makeAsyncStream {
+            self.central.stopScan()
+        }
+    }
+    
+    func connect(_ peripheral: CBPeripheral, options: [String : Any]? = nil) async throws {        
+        try await withCheckedThrowingContinuation { continuation in
+            self.connectContinuation[peripheral.identifier] = continuation
+            print("Connecting to \(peripheral.name!)")
+            central.connect(peripheral)
+        }
+        print("Connected to '\(peripheral.name!)'")
+    }
+    
+    func cancelPeripheralConnection(_ peripheral: CBPeripheral) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            self.disconnectContinuation[peripheral.identifier] = continuation
+            print("Disconnecting from \(peripheral.name!)")
+            central.cancelPeripheralConnection(peripheral)
+        }
+        print("Disconnected from '\(peripheral.name!)'")
+    }
+    
+}
+
 // MARK: - CBCentralManagerDelegate
 
 extension BluetoothStore: CBCentralManagerDelegate {
@@ -214,12 +255,13 @@ extension CBUUID {
         static let heartRate = CBUUID(string: "0x180D")
     }
     
+    enum Characteristic {
+        static let heartRateMeasurement = CBUUID(string: "0x2A37")
+    }
+    
 //    static let cyclingPower = CBUUID(string: "0x1818")
 //    static let cyclingSpeedCadence = CBUUID(string: "0x1816")
 //    static let runningSpeedCadence = CBUUID(string: "0x1814")
-//
-//
-//    static let heartRateMeasurement = CBUUID(string: "0x2A37")
 //
 //    static let cyclingPowerMeasurement = CBUUID(string: "0x2A63")
 //    static let cyclingPowerFeature = CBUUID(string: "0x2A65")

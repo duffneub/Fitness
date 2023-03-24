@@ -199,7 +199,7 @@ struct MainView: View {
                             print("Failed to save workouts -- \(error)")
                         }
                     }
-                    .sensorStore(.bluetooth)
+//                    .sensorStore(.bluetooth)
             }
             .tabItem {
                 Label("New Workout", systemImage: "plus")

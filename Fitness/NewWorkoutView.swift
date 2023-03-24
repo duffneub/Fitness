@@ -5,6 +5,7 @@
 //  Created by Duff Neubauer on 3/9/23.
 //
 
+import CoreBluetooth
 import SwiftUI
 
 struct NewWorkoutView: View {
@@ -23,8 +24,8 @@ struct NewWorkoutView: View {
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
     
-    @State private var selectedSensor: Sensor?
-    @State private var heartRate: Int?
+    private let bluetoothStore = BluetoothStore()
+    @State private var selectecPeripheral: CBPeripheral?
     
     @State private var start: Date?
     
@@ -44,22 +45,33 @@ struct NewWorkoutView: View {
                 }
                 
                 NavigationLink {
-                    FindDevicesView(selection: $selectedSensor)
-                    
-//                    !! What if this connects?
-//                    !! Could it return some new "service" store that plugs into SensorView?
+                    FindDevicesView(services: [CBUUID.Service.heartRate], selection: $selectecPeripheral, bluetoothStore: bluetoothStore)
                 } label: {
-                    if let sensor = selectedSensor {
+                    if let peripheral = selectecPeripheral {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text("Heart Rate")
                                     .font(.headline)
-                                Text(sensor.name)
+                                Text(peripheral.name!)
                                     .font(.caption)
                             }
                             Spacer()
                             
-                            SensorView(sensor: sensor, service: .heartRate)
+                            CharacteristicView(
+                                peripheral: .init(peripheral),
+                                service: CBUUID.Service.heartRate,
+                                characteristic: CBUUID.Characteristic.heartRateMeasurement,
+                                bluetoothStore: bluetoothStore
+                            ) { value in
+                                guard let value = value, let flags = value.first else { return "--" }
+
+                                let is16Bit = (flags & 0b10000000) != 0
+                                let bpm = is16Bit
+                                    ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
+                                    : Int(value[1])
+
+                                return "\(bpm) bpm"
+                            }
                         }
                     } else {
                         HStack {
@@ -88,6 +100,13 @@ struct NewWorkoutView: View {
                 break
             }
         }
+        .onDisappear {
+            Task {
+                if let peripheral = selectecPeripheral {
+                    try? await bluetoothStore.cancelPeripheralConnection(peripheral)
+                }
+            }
+        }
     }
     
     private func startWorkout() {
@@ -107,14 +126,50 @@ struct NewWorkoutView: View {
     }
 }
 
+struct CharacteristicView: View {
+    
+    let peripheral: Peripheral
+    let service: CBUUID
+    let characteristic: CBUUID
+    let bluetoothStore: BluetoothStore
+    let formatter: (Data?) -> String
+    
+    @State private var value: String = "--"
+    
+    var body: some View {
+        Text(value)
+            .task {
+                do {
+                    let service = try await peripheral.discoverServices([service])
+                        .first(where: { $0.uuid == self.service })!
+                    let characteristic = try await peripheral.discoverCharacteristics([characteristic], for: service)
+                        .first(where: { $0.uuid == self.characteristic })!
+                    for try await value in peripheral.value(for: characteristic) {
+                        self.value = formatter(value)
+                    }
+                } catch {
+                    print("Failed -- \(error)")
+                }
+            }
+    }
+    
+}
+
 struct SensorView: View {
     
     let sensor: Sensor
     let service: Sensor.Service
     
+    @State var value: Int = 0
+    
+    @Environment(\.sensorStore) var sensorStore
+    
     var body: some View {
-        ProgressView()
+        Text("\(value)")
             .task {
+//                for await bpm in sensor.traits(\.heartRate) {
+//                    value = bpm
+//                }
 //                !! Does this service store have everything already discovered?
 //                !! Then we're just observing values for a service?
 //                !! Is sensor a store?
@@ -154,50 +209,128 @@ struct SensorView: View {
     
 }
 
-struct FindDevicesView: View {
+class Peripheral: NSObject, ObservableObject {
     
-    @Binding var selection: Sensor?
-    @State private var sensorMap: [UUID: Sensor] = [:]
+    let peripheral: CBPeripheral
     
-    var sensors: [Sensor] {
-        Array(sensorMap.values)
+    private var stateObservation: NSKeyValueObservation!
+    private var servicesContinuation: CheckedContinuation<[CBService], Error>?
+    private var characteristicsContinuation: [CBUUID: CheckedContinuation<[CBCharacteristic], Error>] = [:]
+    private var characteristicValueContinuation: [CBUUID: AsyncThrowingStream<Data?, Error>.Continuation] = [:]
+    
+    init(_ peripheral: CBPeripheral) {
+        self.peripheral = peripheral
+        
+        super.init()
+        
+        self.stateObservation = self.peripheral.observe(\.state) { _, _ in
+            self.objectWillChange.send()
+        }
     }
     
-    @Environment(\.sensorStore) var sensorStore
+    func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws -> [CBService] {
+        let services = try await withCheckedThrowingContinuation { continuation in
+            self.servicesContinuation = continuation
+            print("Discovering service for \(peripheral.name!)")
+            peripheral.delegate = self
+            peripheral.discoverServices(serviceUUIDs)
+        }
+        print("Discovered \(peripheral.services?.count ?? 0) services for '\(peripheral.name!)'")
+        return services
+    }
+    
+    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: CBService) async throws -> [CBCharacteristic] {
+        let characteristics = try await withCheckedThrowingContinuation { continuation in
+            characteristicsContinuation[service.uuid] = continuation
+            print("Discovering characteristics for \(service.description) of \(peripheral.name!)")
+            peripheral.delegate = self
+            peripheral.discoverCharacteristics(characteristicUUIDs, for: service)
+        }
+        print("Discovered \(service.characteristics?.count ?? 0) characteristics for \(service.description) of \(peripheral.name!)")
+        
+        return characteristics
+    }
+    
+    func value(for characteristic: CBCharacteristic) -> AsyncThrowingStream<Data?, Error> {
+        AsyncThrowingStream<Data?, Error> { continuation in
+            characteristicValueContinuation[characteristic.uuid] = continuation
+            continuation.onTermination = { @Sendable [weak self] _ in
+                self?.peripheral.setNotifyValue(false, for: characteristic)
+            }
+            print("Observe value for \(characteristic.description) of \(peripheral.name!)")
+            peripheral.setNotifyValue(true, for: characteristic)
+        }
+    }
+    
+}
+
+extension Peripheral: CBPeripheralDelegate {
+    
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        if let error = error {
+            servicesContinuation?.resume(throwing: error)
+        } else {
+            servicesContinuation?.resume(returning: peripheral.services ?? [])
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        if let error = error {
+            characteristicsContinuation[service.uuid]?.resume(throwing: error)
+        } else {
+            characteristicsContinuation[service.uuid]?.resume(returning: service.characteristics ?? [])
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        if let error = error {
+            characteristicValueContinuation[characteristic.uuid]?.finish(throwing: error)
+        } else {
+            characteristicValueContinuation[characteristic.uuid]?.yield(characteristic.value)
+        }
+    }
+    
+}
+
+struct FindDevicesView: View {
+    
+    let services: [CBUUID]
+    @Binding var selection: CBPeripheral?
+    let bluetoothStore: BluetoothStore
+    
+    @State private var peripheralMap: [UUID: CBPeripheral] = [:]
+    
+    var peripherals: [CBPeripheral] {
+        Array(peripheralMap.values)
+    }
     
     var body: some View {
-        List(sensors) { sensor in
+        List(peripherals, id: \.identifier) { peripheral in
             Button {
                 Task {
                     
-                    if sensor.state == .disconnected {
-                        sensorMap[sensor.id]?.state = .connecting
+                    if peripheral.state == .disconnected {
                         do {
-                            try await sensorStore.connect(to: sensor)
-                            sensorMap[sensor.id]?.state = .connected
-                            selection = sensor
+                            try await bluetoothStore.connect(peripheral)
+                            selection = peripheral
                         } catch {
-                            print("Failed to connect to '\(sensor.name)' -- \(error)")
-                            sensorMap[sensor.id]?.state = .disconnected
+                            print("Failed to connect to '\(peripheral.name!)' -- \(error)")
                         }
                     } else {
-                        sensorMap[sensor.id]?.state = .disconnecting
                         do {
-                            try await sensorStore.disconnect(from: sensor)
-                            sensorMap[sensor.id]?.state = .disconnected
+                            try await bluetoothStore.cancelPeripheralConnection(peripheral)
                             selection = nil
                         } catch {
-                            print("Failed to connect to '\(sensor.name)' -- \(error)")
-                            sensorMap[sensor.id]?.state = .connected
+                            print("Failed to connect to '\(peripheral.name!)' -- \(error)")
                         }
                     }
                 }
             } label: {
                 HStack {
-                    Text(sensor.name)
+                    Text(peripheral.name!)
                     Spacer()
                     
-                    switch sensor.state {
+                    switch peripheral.state {
                     case .disconnected:
                         EmptyView()
                     case .connecting:
@@ -207,6 +340,8 @@ struct FindDevicesView: View {
                             .foregroundColor(.accentColor)
                     case .disconnecting:
                         EmptyView()
+                    @unknown default:
+                        EmptyView()
                     }
                 }
             }
@@ -215,11 +350,10 @@ struct FindDevicesView: View {
         }
         .navigationTitle("Devices…")
         .task {
-            for await sensor in sensorStore.sensors(withServices: [.heartRate]) {
-                sensorMap[sensor.id] = sensor
+            for await peripheral in bluetoothStore.peripherals(withServices: services) {
+                peripheralMap[peripheral.identifier] = peripheral
             }
         }
-        .menuStyle(.automatic)
     }
     
 }
