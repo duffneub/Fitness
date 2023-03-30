@@ -40,8 +40,8 @@ struct WorkoutHistoryView_Previews: PreviewProvider {
             WorkoutHistoryView()
         }
         .workouts([
-            Workout(activity: .indoorRide, start: Date(), end: Date().addingTimeInterval(60 * 60 + 30 * 60), activeDuration: .seconds(0)),
-            Workout(activity: .outdoorRun, start: Date(), end: Date().addingTimeInterval(60 * 45), activeDuration: .seconds(0)),
+            Workout(activity: .indoorRide, start: Date(), end: Date().addingTimeInterval(60 * 60 + 30 * 60), activeDuration: .seconds(0), heartRateSamples: [], powerSamples: []),
+            Workout(activity: .outdoorRun, start: Date(), end: Date().addingTimeInterval(60 * 45), activeDuration: .seconds(0), heartRateSamples: [], powerSamples: []),
         ])
     }
 }

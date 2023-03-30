@@ -8,6 +8,16 @@
 import CoreBluetooth
 import SwiftUI
 
+struct Sample: Equatable, Codable, Hashable {
+    let date: Date
+    let value: Int
+    
+    init(_ value: Int) {
+        self.date = Date()
+        self.value = value
+    }
+}
+
 struct NewWorkoutView: View {
     
     enum Status {
@@ -31,6 +41,9 @@ struct NewWorkoutView: View {
     @State private var status: Status = .ready
     @State private var duration: Duration = .milliseconds(0)
     
+    @State private var heartRateSamples: [Sample] = []
+    @State private var powerSamples: [Sample] = []
+    
     var body: some View {
         VStack {
             List {
@@ -43,9 +56,9 @@ struct NewWorkoutView: View {
                     }
                 }
                 
-                HeartRateView(bluetoothStore: bluetoothStore)
+                HeartRateView(bluetoothStore: bluetoothStore, heartRateSamples: $heartRateSamples)
                 
-                PowerMeterView(bluetoothStore: bluetoothStore)
+                PowerMeterView(bluetoothStore: bluetoothStore, powerSamples: $powerSamples)
             }
             
             Spacer()
@@ -77,7 +90,7 @@ struct NewWorkoutView: View {
     }
     
     private func stopWorkout() {
-        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration)
+        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, heartRateSamples: heartRateSamples, powerSamples: powerSamples)
         addWorkout(workout)
         
         if isPresented {
@@ -93,6 +106,7 @@ struct HeartRateView: View {
     
     @State private var selectecPeripheral: CBPeripheral?
     let bluetoothStore: BluetoothStore
+    @Binding var heartRateSamples: [Sample]
     
     var body: some View {
         NavigationLink {
@@ -125,9 +139,13 @@ struct HeartRateView: View {
                         print("flags: \(flags)")
                         print("is16Bit: \(is16Bit)")
                         
+                        print("Heart Rate")
                         for duff in value.enumerated() {
                             print("value[\(duff.offset)] = \(duff.element)")
                         }
+                        print("")
+                        
+                        heartRateSamples.append(.init(bpm))
 
                         return "\(bpm) bpm"
                     }
@@ -157,6 +175,7 @@ struct PowerMeterView: View {
     
     @State private var selectecPeripheral: CBPeripheral?
     let bluetoothStore: BluetoothStore
+    @Binding var powerSamples: [Sample]
     
     var body: some View {
         NavigationLink {
@@ -187,6 +206,8 @@ struct PowerMeterView: View {
                             print("value[\(duff.offset)] = \(duff.element)")
                         }
                         print("")
+                        
+                        powerSamples.append(.init(power))
                         
                         return "\(power) watts"
                     }
