@@ -69,6 +69,14 @@ struct NewWorkoutView: View {
                                 let bpm = is16Bit
                                     ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
                                     : Int(value[1])
+                                
+                                print("value: \(value)")
+                                print("flags: \(flags)")
+                                print("is16Bit: \(is16Bit)")
+                                
+                                for duff in value.enumerated() {
+                                    print("value[\(duff.offset)] = \(duff.element)")
+                                }
 
                                 return "\(bpm) bpm"
                             }
@@ -151,143 +159,6 @@ struct CharacteristicView: View {
                     print("Failed -- \(error)")
                 }
             }
-    }
-    
-}
-
-struct SensorView: View {
-    
-    let sensor: Sensor
-    let service: Sensor.Service
-    
-    @State var value: Int = 0
-    
-    @Environment(\.sensorStore) var sensorStore
-    
-    var body: some View {
-        Text("\(value)")
-            .task {
-//                for await bpm in sensor.traits(\.heartRate) {
-//                    value = bpm
-//                }
-//                !! Does this service store have everything already discovered?
-//                !! Then we're just observing values for a service?
-//                !! Is sensor a store?
-//                !! Sensor can be a value and a store right? Cause SensorScanner is
-//
-//                for await value in sensor.value(for: service) {
-                    // connect
-                    
-                    // discover service
-                    
-                    // discover characteristc on service
-                    
-                    // notify
-                    
-                    // disconnect on cancel
-//                }
-            }
-            .onAppear {
-                
-                print("Sensor: \(sensor)")
-            }
-        
-        // Get characteristic from Sensor.Service
-        // Observe changes
-        // Convert value to string
-        
-        // get peripheral
-            // retirve peripheral with UUID
-            // connect to peripheral
-            // discover service
-            // discover char
-        // observe value for a characteristic
-            // notify
-        // convert value to string
-            // ?
-    }
-    
-}
-
-class Peripheral: NSObject, ObservableObject {
-    
-    let peripheral: CBPeripheral
-    
-    private var stateObservation: NSKeyValueObservation!
-    private var servicesContinuation: CheckedContinuation<[CBService], Error>?
-    private var characteristicsContinuation: [CBUUID: CheckedContinuation<[CBCharacteristic], Error>] = [:]
-    private var characteristicValueContinuation: [CBUUID: AsyncThrowingStream<Data?, Error>.Continuation] = [:]
-    
-    init(_ peripheral: CBPeripheral) {
-        self.peripheral = peripheral
-        
-        super.init()
-        
-        self.stateObservation = self.peripheral.observe(\.state) { _, _ in
-            self.objectWillChange.send()
-        }
-    }
-    
-    func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws -> [CBService] {
-        let services = try await withCheckedThrowingContinuation { continuation in
-            self.servicesContinuation = continuation
-            print("Discovering service for \(peripheral.name!)")
-            peripheral.delegate = self
-            peripheral.discoverServices(serviceUUIDs)
-        }
-        print("Discovered \(peripheral.services?.count ?? 0) services for '\(peripheral.name!)'")
-        return services
-    }
-    
-    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: CBService) async throws -> [CBCharacteristic] {
-        let characteristics = try await withCheckedThrowingContinuation { continuation in
-            characteristicsContinuation[service.uuid] = continuation
-            print("Discovering characteristics for \(service.description) of \(peripheral.name!)")
-            peripheral.delegate = self
-            peripheral.discoverCharacteristics(characteristicUUIDs, for: service)
-        }
-        print("Discovered \(service.characteristics?.count ?? 0) characteristics for \(service.description) of \(peripheral.name!)")
-        
-        return characteristics
-    }
-    
-    func value(for characteristic: CBCharacteristic) -> AsyncThrowingStream<Data?, Error> {
-        AsyncThrowingStream<Data?, Error> { continuation in
-            characteristicValueContinuation[characteristic.uuid] = continuation
-            continuation.onTermination = { @Sendable [weak self] _ in
-                self?.peripheral.setNotifyValue(false, for: characteristic)
-            }
-            print("Observe value for \(characteristic.description) of \(peripheral.name!)")
-            peripheral.setNotifyValue(true, for: characteristic)
-        }
-    }
-    
-}
-
-extension Peripheral: CBPeripheralDelegate {
-    
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        if let error = error {
-            servicesContinuation?.resume(throwing: error)
-        } else {
-            servicesContinuation?.resume(returning: peripheral.services ?? [])
-        }
-    }
-    
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        if let error = error {
-            characteristicsContinuation[service.uuid]?.resume(throwing: error)
-        } else {
-            characteristicsContinuation[service.uuid]?.resume(returning: service.characteristics ?? [])
-        }
-    }
-    
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        if let error = error {
-            characteristicValueContinuation[characteristic.uuid]?.finish(throwing: error)
-        } else {
-            characteristicValueContinuation[characteristic.uuid]?.yield(characteristic.value)
-        }
     }
     
 }
@@ -462,47 +333,6 @@ struct Stopwatch<Label: View>: View {
     private func pause() {
         timer?.invalidate()
         accumulatedTime = duration
-    }
-    
-}
-
-struct HeartRateMonitor<Label: View>: View {
-    
-    enum State {
-        case disconnected
-        case connecting
-        case connected(Int?)
-        case disconnecting
-    }
-    
-    @SwiftUI.State private var state: State = .disconnected
-    
-    let label: (State) -> Label
-    
-    init(@ViewBuilder label: @escaping (State) -> Label) {
-        self.label = label
-    }
-    
-    var body: some View {
-        label(state)
-//            .task {
-//                await connect()
-//            }
-    }
-    
-    private func connect() async {
-        state = .connecting
-        
-        try? await Task.sleep(for: .seconds(1))
-        
-        state = .connected(nil)
-        
-        try? await Task.sleep(for: .seconds(1))
-        
-        while true {
-            state = .connected((100...180).randomElement()!)
-            try? await Task.sleep(for: .seconds([1.0, 1.5, 2.0, 2.5, 3.0].randomElement()!))
-        }
     }
     
 }
