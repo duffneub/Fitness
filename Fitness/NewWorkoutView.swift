@@ -44,6 +44,8 @@ struct NewWorkoutView: View {
                 }
                 
                 HeartRateView(bluetoothStore: bluetoothStore)
+                
+                PowerMeterView(bluetoothStore: bluetoothStore)
             }
             
             Spacer()
@@ -51,6 +53,13 @@ struct NewWorkoutView: View {
             StartStopControls(status: $status)
         }
         .navigationTitle(activity.name)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Dismiss") {
+                    dismiss()
+                }
+            }
+        }
         .onChange(of: status) { newStatus in
             switch status {
             case .inProgress:
@@ -126,6 +135,65 @@ struct HeartRateView: View {
             } else {
                 HStack {
                     Text("Heart Rate")
+                        .font(.headline)
+                    Spacer()
+                    
+                    Text("Search")
+                }
+            }
+        }
+        .onDisappear {
+            Task {
+                if let peripheral = selectecPeripheral {
+                    try? await bluetoothStore.cancelPeripheralConnection(peripheral)
+                }
+            }
+        }
+    }
+    
+}
+
+struct PowerMeterView: View {
+    
+    @State private var selectecPeripheral: CBPeripheral?
+    let bluetoothStore: BluetoothStore
+    
+    var body: some View {
+        NavigationLink {
+            FindDevicesView(services: [CBUUID.Service.cyclingPower], selection: $selectecPeripheral, bluetoothStore: bluetoothStore)
+        } label: {
+            if let peripheral = selectecPeripheral {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Power")
+                            .font(.headline)
+                        Text(peripheral.name!)
+                            .font(.caption)
+                    }
+                    Spacer()
+                    
+                    CharacteristicView(
+                        peripheral: .init(peripheral),
+                        service: CBUUID.Service.cyclingPower,
+                        characteristic: CBUUID.Characteristic.cyclingPowerMeasurement,
+                        bluetoothStore: bluetoothStore
+                    ) { value in
+                        guard let value = value else { return "--" }
+                        
+                        let power = Int(value[2...3].withUnsafeBytes { $0.load(as: UInt16.self) })
+                        
+                        print("Power:")
+                        for duff in value.enumerated() {
+                            print("value[\(duff.offset)] = \(duff.element)")
+                        }
+                        print("")
+                        
+                        return "\(power) watts"
+                    }
+                }
+            } else {
+                HStack {
+                    Text("Power")
                         .font(.headline)
                     Spacer()
                     

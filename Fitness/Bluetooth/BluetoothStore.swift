@@ -253,17 +253,17 @@ extension CBUUID {
     
     enum Service {
         static let heartRate = CBUUID(string: "0x180D")
+        static let cyclingPower = CBUUID(string: "0x1818")
     }
     
     enum Characteristic {
         static let heartRateMeasurement = CBUUID(string: "0x2A37")
+        static let cyclingPowerMeasurement = CBUUID(string: "0x2A63")
     }
     
-//    static let cyclingPower = CBUUID(string: "0x1818")
 //    static let cyclingSpeedCadence = CBUUID(string: "0x1816")
 //    static let runningSpeedCadence = CBUUID(string: "0x1814")
 //
-//    static let cyclingPowerMeasurement = CBUUID(string: "0x2A63")
 //    static let cyclingPowerFeature = CBUUID(string: "0x2A65")
 //    static let sensorLocation = CBUUID(string: "0x2A5D")
 //    static let cyclingPowerControlPoint = CBUUID(string: "0x2A66")
