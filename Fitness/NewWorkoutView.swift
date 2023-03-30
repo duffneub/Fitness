@@ -25,7 +25,6 @@ struct NewWorkoutView: View {
     @Environment(\.dismiss) var dismiss
     
     private let bluetoothStore = BluetoothStore()
-    @State private var selectecPeripheral: CBPeripheral?
     
     @State private var start: Date?
     
@@ -44,53 +43,7 @@ struct NewWorkoutView: View {
                     }
                 }
                 
-                NavigationLink {
-                    FindDevicesView(services: [CBUUID.Service.heartRate], selection: $selectecPeripheral, bluetoothStore: bluetoothStore)
-                } label: {
-                    if let peripheral = selectecPeripheral {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text("Heart Rate")
-                                    .font(.headline)
-                                Text(peripheral.name!)
-                                    .font(.caption)
-                            }
-                            Spacer()
-                            
-                            CharacteristicView(
-                                peripheral: .init(peripheral),
-                                service: CBUUID.Service.heartRate,
-                                characteristic: CBUUID.Characteristic.heartRateMeasurement,
-                                bluetoothStore: bluetoothStore
-                            ) { value in
-                                guard let value = value, let flags = value.first else { return "--" }
-
-                                let is16Bit = (flags & 0b10000000) != 0
-                                let bpm = is16Bit
-                                    ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
-                                    : Int(value[1])
-                                
-                                print("value: \(value)")
-                                print("flags: \(flags)")
-                                print("is16Bit: \(is16Bit)")
-                                
-                                for duff in value.enumerated() {
-                                    print("value[\(duff.offset)] = \(duff.element)")
-                                }
-
-                                return "\(bpm) bpm"
-                            }
-                        }
-                    } else {
-                        HStack {
-                            Text("Heart Rate")
-                                .font(.headline)
-                            Spacer()
-                            
-                            Text("Search")
-                        }
-                    }
-                }
+                HeartRateView(bluetoothStore: bluetoothStore)
             }
             
             Spacer()
@@ -106,13 +59,6 @@ struct NewWorkoutView: View {
                 stopWorkout()
             case .ready, .paused:
                 break
-            }
-        }
-        .onDisappear {
-            Task {
-                if let peripheral = selectecPeripheral {
-                    try? await bluetoothStore.cancelPeripheralConnection(peripheral)
-                }
             }
         }
     }
@@ -132,6 +78,70 @@ struct NewWorkoutView: View {
             }
         }
     }
+}
+
+struct HeartRateView: View {
+    
+    @State private var selectecPeripheral: CBPeripheral?
+    let bluetoothStore: BluetoothStore
+    
+    var body: some View {
+        NavigationLink {
+            FindDevicesView(services: [CBUUID.Service.heartRate], selection: $selectecPeripheral, bluetoothStore: bluetoothStore)
+        } label: {
+            if let peripheral = selectecPeripheral {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Heart Rate")
+                            .font(.headline)
+                        Text(peripheral.name!)
+                            .font(.caption)
+                    }
+                    Spacer()
+                    
+                    CharacteristicView(
+                        peripheral: .init(peripheral),
+                        service: CBUUID.Service.heartRate,
+                        characteristic: CBUUID.Characteristic.heartRateMeasurement,
+                        bluetoothStore: bluetoothStore
+                    ) { value in
+                        guard let value = value, let flags = value.first else { return "--" }
+
+                        let is16Bit = (flags & 0b10000000) != 0
+                        let bpm = is16Bit
+                            ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
+                            : Int(value[1])
+                        
+                        print("value: \(value)")
+                        print("flags: \(flags)")
+                        print("is16Bit: \(is16Bit)")
+                        
+                        for duff in value.enumerated() {
+                            print("value[\(duff.offset)] = \(duff.element)")
+                        }
+
+                        return "\(bpm) bpm"
+                    }
+                }
+            } else {
+                HStack {
+                    Text("Heart Rate")
+                        .font(.headline)
+                    Spacer()
+                    
+                    Text("Search")
+                }
+            }
+        }
+        .onDisappear {
+            Task {
+                if let peripheral = selectecPeripheral {
+                    try? await bluetoothStore.cancelPeripheralConnection(peripheral)
+                }
+            }
+        }
+    }
+    
 }
 
 struct CharacteristicView: View {
