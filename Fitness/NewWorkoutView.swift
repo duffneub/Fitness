@@ -34,7 +34,7 @@ struct NewWorkoutView: View {
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
     
-    private let bluetoothStore = BluetoothStore()
+    let bluetoothStore: BluetoothStore
     
     @State private var start: Date?
     
@@ -163,6 +163,11 @@ struct HeartRateView: View {
         .onDisappear {
             Task {
                 if let peripheral = selectecPeripheral {
+                    if let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
+                       let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
+                    {
+                        peripheral.setNotifyValue(false, for: char)
+                    }
                     try? await bluetoothStore.cancelPeripheralConnection(peripheral)
                 }
             }
@@ -225,6 +230,11 @@ struct PowerMeterView: View {
         .onDisappear {
             Task {
                 if let peripheral = selectecPeripheral {
+                    if let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
+                       let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
+                    {
+                        peripheral.setNotifyValue(false, for: char)
+                    }
                     try? await bluetoothStore.cancelPeripheralConnection(peripheral)
                 }
             }
@@ -438,45 +448,45 @@ struct Stopwatch<Label: View>: View {
 
 // MARK: - Preview
 
-struct NewWorkoutView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            NewWorkoutView(activity: .indoorRide)
-        }
-        .onAddWorkout { _ in }
-        .sensorStore(.preview)
-    }
-}
-
-struct PreviewSensorStore: SensorStore {
-    
-    let sensors: [Sensor] = [
-        Sensor(id: UUID(), name: "Wahoo Tickr", services: [.heartRate]),
-        Sensor(id: UUID(), name: "Polar H9", services: [.heartRate]),
-        Sensor(id: UUID(), name: "Scosche Rhythm24", services: [.heartRate]),
-    ]
-    
-    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
-        var iterator = sensors.makeIterator()
-
-        return AsyncStream {
-            try? await Task.sleep(for: .seconds(1))
-            return iterator.next()
-        }
-    }
-    
-    func connect(to sensor: Sensor) async throws {
-        try await Task.sleep(for: .seconds(1))
-    }
-    
-    func disconnect(from sensor: Sensor) async throws {
-        try await Task.sleep(for: .seconds(1))
-    }
-    
-}
-
-extension SensorStore where Self == PreviewSensorStore {
-    
-    static var preview: Self { Self() }
-    
-}
+//struct NewWorkoutView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        NavigationStack {
+//            NewWorkoutView(activity: .indoorRide)
+//        }
+//        .onAddWorkout { _ in }
+//        .sensorStore(.preview)
+//    }
+//}
+//
+//struct PreviewSensorStore: SensorStore {
+//
+//    let sensors: [Sensor] = [
+//        Sensor(id: UUID(), name: "Wahoo Tickr", services: [.heartRate]),
+//        Sensor(id: UUID(), name: "Polar H9", services: [.heartRate]),
+//        Sensor(id: UUID(), name: "Scosche Rhythm24", services: [.heartRate]),
+//    ]
+//
+//    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
+//        var iterator = sensors.makeIterator()
+//
+//        return AsyncStream {
+//            try? await Task.sleep(for: .seconds(1))
+//            return iterator.next()
+//        }
+//    }
+//
+//    func connect(to sensor: Sensor) async throws {
+//        try await Task.sleep(for: .seconds(1))
+//    }
+//
+//    func disconnect(from sensor: Sensor) async throws {
+//        try await Task.sleep(for: .seconds(1))
+//    }
+//
+//}
+//
+//extension SensorStore where Self == PreviewSensorStore {
+//
+//    static var preview: Self { Self() }
+//
+//}

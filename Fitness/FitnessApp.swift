@@ -174,6 +174,7 @@ struct MainView: View {
     
     @State private var workouts: [Workout] = []
     @Environment(\.workoutStore) private var workoutStore
+    let bluetoothStore = BluetoothStore()
     
     @State private var tab: Tab = .workoutHistory
     @State private var navigationPath = NavigationPath()
@@ -190,7 +191,7 @@ struct MainView: View {
             .tag(Tab.workoutHistory)
             
             NavigationStack {
-                ActivityListView(activities: activities)
+                ActivityListView(activities: activities, bluetoothStore: bluetoothStore)
                     .onAddWorkout { workout in
                         workouts.append(workout)
                         

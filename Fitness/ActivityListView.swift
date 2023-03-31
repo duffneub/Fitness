@@ -10,6 +10,7 @@ import SwiftUI
 struct ActivityListView: View {
     
     let activities: [Activity]
+    let bluetoothStore: BluetoothStore
     
     @State private var selection: Activity?
     
@@ -28,16 +29,16 @@ struct ActivityListView: View {
         .navigationTitle("Activities")
         .fullScreenCover(item: $selection) { activity in
             NavigationStack {
-                NewWorkoutView(activity: activity)
+                NewWorkoutView(activity: activity, bluetoothStore: bluetoothStore)
             }
         }
     }
 }
 
-struct ExerciseListView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            ActivityListView(activities: Activity.allCases)
-        }
-    }
-}
+//struct ExerciseListView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        NavigationStack {
+//            ActivityListView(activities: Activity.allCases)
+//        }
+//    }
+//}

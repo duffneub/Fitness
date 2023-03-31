@@ -17,8 +17,6 @@ class BluetoothStore: NSObject {
     private var stateContinuation: CheckedContinuation<CBManagerState, Never>?
     private var scanContinuation: AsyncStream<CBPeripheral>.Continuation?
     private var connectContinuation: [UUID: CheckedContinuation<Void, Error>] = [:]
-    private var servicesContinuation: CheckedContinuation<[CBService], Error>?
-    private var characteristicContinuations: [CBUUID: CheckedContinuation<[CBCharacteristic], Error>] = [:]
     private var disconnectContinuation: [UUID: CheckedContinuation<Void, Error>] = [:]
     
     var state: CBManagerState {
