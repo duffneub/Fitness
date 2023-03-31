@@ -58,9 +58,9 @@ struct NewWorkoutView: View {
                     }
                 }
                 
-                HeartRateView(bluetoothStore: bluetoothStore, heartRateSamples: $heartRateSamples, selectedPeripherals: $selectedPeripherals)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $heartRateSamples, selectedPeripherals: $selectedPeripherals, metric: .heartRate)
                 
-                PowerMeterView(bluetoothStore: bluetoothStore, powerSamples: $powerSamples, selectedPeripherals: $selectedPeripherals)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $powerSamples, selectedPeripherals: $selectedPeripherals, metric: .power)
             }
             
             Spacer()
@@ -124,13 +124,12 @@ struct NewWorkoutView: View {
     }
 }
 
-struct HeartRateView: View {
+struct WorkoutMetricView: View {
     
     let bluetoothStore: BluetoothStore
-    @Binding var heartRateSamples: [Sample]
+    @Binding var samples: [Sample]
     @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
-    
-    let metric: Workout.Metric = .heartRate
+    let metric: Workout.Metric
     
     var body: some View {
         NavigationLink {
@@ -139,7 +138,7 @@ struct HeartRateView: View {
             if let peripheral = selectedPeripherals[metric.serviceID] {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("Heart Rate")
+                        Text("\(metric.title)")
                             .font(.headline)
                         Text(peripheral.name!)
                             .font(.caption)
@@ -152,31 +151,16 @@ struct HeartRateView: View {
                         characteristic: metric.characteristicID,
                         bluetoothStore: bluetoothStore
                     ) { value in
-                        guard let value = value, let flags = value.first else { return "--" }
-
-                        let is16Bit = (flags & 0b10000000) != 0
-                        let bpm = is16Bit
-                            ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
-                            : Int(value[1])
-                        
-                        print("value: \(value)")
-                        print("flags: \(flags)")
-                        print("is16Bit: \(is16Bit)")
-                        
-                        print("Heart Rate")
-                        for duff in value.enumerated() {
-                            print("value[\(duff.offset)] = \(duff.element)")
+                        if let v = metric.format(value) {
+                            samples.append(.init(v))
                         }
-                        print("")
-                        
-                        heartRateSamples.append(.init(bpm))
 
-                        return "\(bpm) bpm"
+                        return metric.description(value)
                     }
                 }
             } else {
                 HStack {
-                    Text("Heart Rate")
+                    Text("\(metric.title)")
                         .font(.headline)
                     Spacer()
                     
@@ -193,6 +177,19 @@ extension Workout {
     enum Metric {
         case heartRate
         case power
+    }
+    
+}
+
+extension Workout.Metric {
+    
+    var title: String {
+        switch self {
+        case .heartRate:
+            return "Heart Rate"
+        case .power:
+            return "Power"
+        }
     }
     
 }
@@ -217,60 +214,48 @@ extension Workout.Metric {
         }
     }
     
-}
+    func format(_ value: Data?) -> Int? {
+        switch self {
+        case .heartRate:
+            guard let value = value, let flags = value.first else { return nil }
 
-struct PowerMeterView: View {
-    
-    let bluetoothStore: BluetoothStore
-    @Binding var powerSamples: [Sample]
-    @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
-    
-    let metric: Workout.Metric = .power
-    
-    var body: some View {
-        NavigationLink {
-            FindDevicesView(services: [metric.serviceID], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
-        } label: {
-            if let peripheral = selectedPeripherals[metric.serviceID] {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Power")
-                            .font(.headline)
-                        Text(peripheral.name!)
-                            .font(.caption)
-                    }
-                    Spacer()
-                    
-                    CharacteristicView(
-                        peripheral: .init(peripheral),
-                        service: metric.serviceID,
-                        characteristic: metric.characteristicID,
-                        bluetoothStore: bluetoothStore
-                    ) { value in
-                        guard let value = value else { return "--" }
-                        
-                        let power = Int(value[2...3].withUnsafeBytes { $0.load(as: UInt16.self) })
-                        
-                        print("Power:")
-                        for duff in value.enumerated() {
-                            print("value[\(duff.offset)] = \(duff.element)")
-                        }
-                        print("")
-                        
-                        powerSamples.append(.init(power))
-                        
-                        return "\(power) watts"
-                    }
-                }
-            } else {
-                HStack {
-                    Text("Power")
-                        .font(.headline)
-                    Spacer()
-                    
-                    Text("Search")
-                }
+            let is16Bit = (flags & 0b10000000) != 0
+            let bpm = is16Bit
+                ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
+                : Int(value[1])
+            
+            print("value: \(value)")
+            print("flags: \(flags)")
+            print("is16Bit: \(is16Bit)")
+            
+            print("\(title):")
+            for duff in value.enumerated() {
+                print("value[\(duff.offset)] = \(duff.element)")
             }
+            print("")
+            
+            return bpm
+        case .power:
+            guard let value = value else { return nil }
+            
+            let power = Int(value[2...3].withUnsafeBytes { $0.load(as: UInt16.self) })
+            
+            print("\(title):")
+            for duff in value.enumerated() {
+                print("value[\(duff.offset)] = \(duff.element)")
+            }
+            print("")
+            
+            return power
+        }
+    }
+    
+    func description(_ value: Data?) -> String {
+        switch self {
+        case .heartRate:
+            return format(value).map { "\($0) bpm" } ?? "--"
+        case .power:
+            return format(value).map { "\($0) watts" } ?? "--"
         }
     }
     
