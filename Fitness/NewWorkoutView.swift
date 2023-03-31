@@ -130,11 +130,13 @@ struct HeartRateView: View {
     @Binding var heartRateSamples: [Sample]
     @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
     
+    let metric: Workout.Metric = .heartRate
+    
     var body: some View {
         NavigationLink {
-            FindDevicesView(services: [CBUUID.Service.heartRate], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
+            FindDevicesView(services: [metric.serviceID], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
         } label: {
-            if let peripheral = selectedPeripherals[CBUUID.Service.heartRate] {
+            if let peripheral = selectedPeripherals[metric.serviceID] {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("Heart Rate")
@@ -146,8 +148,8 @@ struct HeartRateView: View {
                     
                     CharacteristicView(
                         peripheral: .init(peripheral),
-                        service: CBUUID.Service.heartRate,
-                        characteristic: CBUUID.Characteristic.heartRateMeasurement,
+                        service: metric.serviceID,
+                        characteristic: metric.characteristicID,
                         bluetoothStore: bluetoothStore
                     ) { value in
                         guard let value = value, let flags = value.first else { return "--" }
@@ -186,17 +188,50 @@ struct HeartRateView: View {
     
 }
 
+extension Workout {
+    
+    enum Metric {
+        case heartRate
+        case power
+    }
+    
+}
+
+extension Workout.Metric {
+    
+    var serviceID: CBUUID {
+        switch self {
+        case .heartRate:
+            return CBUUID.Service.heartRate
+        case .power:
+            return CBUUID.Service.cyclingPower
+        }
+    }
+    
+    var characteristicID: CBUUID {
+        switch self {
+        case .heartRate:
+            return CBUUID.Characteristic.heartRateMeasurement
+        case .power:
+            return CBUUID.Characteristic.cyclingPowerMeasurement
+        }
+    }
+    
+}
+
 struct PowerMeterView: View {
     
     let bluetoothStore: BluetoothStore
     @Binding var powerSamples: [Sample]
     @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
     
+    let metric: Workout.Metric = .power
+    
     var body: some View {
         NavigationLink {
-            FindDevicesView(services: [CBUUID.Service.cyclingPower], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
+            FindDevicesView(services: [metric.serviceID], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
         } label: {
-            if let peripheral = selectedPeripherals[CBUUID.Service.cyclingPower] {
+            if let peripheral = selectedPeripherals[metric.serviceID] {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("Power")
@@ -208,8 +243,8 @@ struct PowerMeterView: View {
                     
                     CharacteristicView(
                         peripheral: .init(peripheral),
-                        service: CBUUID.Service.cyclingPower,
-                        characteristic: CBUUID.Characteristic.cyclingPowerMeasurement,
+                        service: metric.serviceID,
+                        characteristic: metric.characteristicID,
                         bluetoothStore: bluetoothStore
                     ) { value in
                         guard let value = value else { return "--" }
