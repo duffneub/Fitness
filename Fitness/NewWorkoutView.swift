@@ -36,6 +36,8 @@ struct NewWorkoutView: View {
     
     let bluetoothStore: BluetoothStore
     
+    @State private var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
+    
     @State private var start: Date?
     
     @State private var status: Status = .ready
@@ -56,9 +58,9 @@ struct NewWorkoutView: View {
                     }
                 }
                 
-                HeartRateView(bluetoothStore: bluetoothStore, heartRateSamples: $heartRateSamples)
+                HeartRateView(bluetoothStore: bluetoothStore, heartRateSamples: $heartRateSamples, selectedPeripherals: $selectedPeripherals)
                 
-                PowerMeterView(bluetoothStore: bluetoothStore, powerSamples: $powerSamples)
+                PowerMeterView(bluetoothStore: bluetoothStore, powerSamples: $powerSamples, selectedPeripherals: $selectedPeripherals)
             }
             
             Spacer()
@@ -69,7 +71,27 @@ struct NewWorkoutView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Dismiss") {
-                    dismiss()
+                    selectedPeripherals.values.forEach { peripheral in
+                        Task {
+                            if selectedPeripherals[CBUUID.Service.heartRate] != nil,
+                               let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
+                               let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
+                            {
+                                print("Stop observing \(char.description) of \(peripheral.name!)")
+                                peripheral.setNotifyValue(false, for: char)
+                            }
+                            if selectedPeripherals[CBUUID.Service.cyclingPower] != nil,
+                               let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.cyclingPower }),
+                               let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.cyclingPowerMeasurement })
+                            {
+                                print("Stop observing \(char.description) of \(peripheral.name!)")
+                                peripheral.setNotifyValue(false, for: char)
+                            }
+                            try? await bluetoothStore.cancelPeripheralConnection(peripheral)
+                            
+                            dismiss()
+                        }
+                    }
                 }
             }
         }
@@ -104,15 +126,15 @@ struct NewWorkoutView: View {
 
 struct HeartRateView: View {
     
-    @State private var selectecPeripheral: CBPeripheral?
     let bluetoothStore: BluetoothStore
     @Binding var heartRateSamples: [Sample]
+    @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
     
     var body: some View {
         NavigationLink {
-            FindDevicesView(services: [CBUUID.Service.heartRate], selection: $selectecPeripheral, bluetoothStore: bluetoothStore)
+            FindDevicesView(services: [CBUUID.Service.heartRate], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
         } label: {
-            if let peripheral = selectecPeripheral {
+            if let peripheral = selectedPeripherals[CBUUID.Service.heartRate] {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("Heart Rate")
@@ -160,33 +182,21 @@ struct HeartRateView: View {
                 }
             }
         }
-        .onDisappear {
-            Task {
-                if let peripheral = selectecPeripheral {
-                    if let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
-                       let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
-                    {
-                        peripheral.setNotifyValue(false, for: char)
-                    }
-                    try? await bluetoothStore.cancelPeripheralConnection(peripheral)
-                }
-            }
-        }
     }
     
 }
 
 struct PowerMeterView: View {
     
-    @State private var selectecPeripheral: CBPeripheral?
     let bluetoothStore: BluetoothStore
     @Binding var powerSamples: [Sample]
+    @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
     
     var body: some View {
         NavigationLink {
-            FindDevicesView(services: [CBUUID.Service.cyclingPower], selection: $selectecPeripheral, bluetoothStore: bluetoothStore)
+            FindDevicesView(services: [CBUUID.Service.cyclingPower], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
         } label: {
-            if let peripheral = selectecPeripheral {
+            if let peripheral = selectedPeripherals[CBUUID.Service.cyclingPower] {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("Power")
@@ -227,18 +237,6 @@ struct PowerMeterView: View {
                 }
             }
         }
-        .onDisappear {
-            Task {
-                if let peripheral = selectecPeripheral {
-                    if let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
-                       let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
-                    {
-                        peripheral.setNotifyValue(false, for: char)
-                    }
-                    try? await bluetoothStore.cancelPeripheralConnection(peripheral)
-                }
-            }
-        }
     }
     
 }
@@ -275,7 +273,7 @@ struct CharacteristicView: View {
 struct FindDevicesView: View {
     
     let services: [CBUUID]
-    @Binding var selection: CBPeripheral?
+    @Binding var selection: [CBUUID: CBPeripheral]
     let bluetoothStore: BluetoothStore
     
     @State private var peripheralMap: [UUID: CBPeripheral] = [:]
@@ -292,14 +290,14 @@ struct FindDevicesView: View {
                     if peripheral.state == .disconnected {
                         do {
                             try await bluetoothStore.connect(peripheral)
-                            selection = peripheral
+                            selection[services.first!] = peripheral
                         } catch {
                             print("Failed to connect to '\(peripheral.name!)' -- \(error)")
                         }
                     } else {
                         do {
                             try await bluetoothStore.cancelPeripheralConnection(peripheral)
-                            selection = nil
+                            selection[services.first!] = nil
                         } catch {
                             print("Failed to connect to '\(peripheral.name!)' -- \(error)")
                         }

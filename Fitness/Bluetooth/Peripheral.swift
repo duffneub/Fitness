@@ -52,9 +52,11 @@ class Peripheral: NSObject, ObservableObject {
     func value(for characteristic: CBCharacteristic) -> AsyncThrowingStream<Data?, Error> {
         AsyncThrowingStream<Data?, Error> { continuation in
             characteristicValueContinuation[characteristic.uuid] = continuation
-            continuation.onTermination = { @Sendable [weak self] _ in
-                self?.peripheral.setNotifyValue(false, for: characteristic)
-            }
+//            let name = peripheral.name!
+//            continuation.onTermination = { @Sendable [weak self] _ in
+//                print("Stop observing \(characteristic.description) of \(name)")
+//                self?.peripheral.setNotifyValue(false, for: characteristic)
+//            }
             print("Observe value for \(characteristic.description) of \(peripheral.name!)")
             peripheral.setNotifyValue(true, for: characteristic)
         }
