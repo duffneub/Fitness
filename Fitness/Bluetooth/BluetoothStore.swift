@@ -12,8 +12,6 @@ class BluetoothStore: NSObject {
 
     private var central: CBCentralManager!
     
-    @Published private var peripherals: [UUID: CBPeripheral] = [:]
-    
     private var stateContinuation: CheckedContinuation<CBManagerState, Never>?
     private var scanContinuation: AsyncStream<CBPeripheral>.Continuation?
     private var connectContinuation: [UUID: CheckedContinuation<Void, Error>] = [:]
@@ -114,7 +112,6 @@ extension BluetoothStore: CBCentralManagerDelegate {
         rssi RSSI: NSNumber
     ) {
         print("Discovered \(peripheral.name!)")
-        peripherals[peripheral.identifier] = peripheral
         scanContinuation?.yield(peripheral)
     }
     
@@ -140,112 +137,112 @@ extension BluetoothStore: CBCentralManagerDelegate {
 
 }
 
-extension BluetoothStore: SensorStore {
-    
-    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
-        AsyncStream<CBPeripheral> { continuation in
-            self.scanContinuation?.finish()
-            self.scanContinuation = continuation
-            Task {
-                guard await state == .poweredOn else {
-                    continuation.finish()
-                    return
-                }
-
-                print("Start scan")
-                central.scanForPeripherals(withServices: services.map(\.bluetoothID))
-            }
-        }
-        .map(Sensor.init)
-        .makeAsyncStream {
-            self.central.stopScan()
-            self.peripherals = self.peripherals.filter { $0.value.state != .disconnected }
-        }
-    }
-    
-    func connect(to sensor: Sensor) async throws {
-        enum ConnectError: Error, CustomStringConvertible {
-            case retrievePeripheral
-            
-            var description: String {
-                switch self {
-                case .retrievePeripheral: return "Failed to retrieve peripheral"
-                }
-            }
-        }
-        guard let peripheral = peripherals[sensor.id] else {
-            throw ConnectError.retrievePeripheral
-        }
-        
-        print("Connecting to \(peripheral.name!)")
-        try await withCheckedThrowingContinuation { continuation in
-            self.connectContinuation[peripheral.identifier] = continuation
-            central.connect(peripheral)
-        }
-        print("Connected to '\(peripheral.name!)'")
-    }
-    
-    func disconnect(from sensor: Sensor) async throws {
-        enum DisconnectError: Error, CustomStringConvertible {
-            case retrievePeripheral
-            
-            var description: String {
-                switch self {
-                case .retrievePeripheral: return "Failed to retrieve peripheral"
-                }
-            }
-        }
-        guard let peripheral = peripherals[sensor.id] else {
-            throw DisconnectError.retrievePeripheral
-        }
-        
-        print("Disconnecting from \(peripheral.name!)")
-        try await withCheckedThrowingContinuation { continuation in
-            self.disconnectContinuation[peripheral.identifier] = continuation
-            central.cancelPeripheralConnection(peripheral)
-        }
-        print("Disconnected from '\(peripheral.name!)'")
-    }
-    
-}
-
-extension SensorStore where Self == BluetoothStore {
-    
-    static var bluetooth: Self { Self() }
-    
-}
-
-extension Sensor {
-    
-    init(_ peripheral: CBPeripheral) {
-        self.init(
-            id: peripheral.identifier,
-            name: peripheral.name!,
-            services: (peripheral.services ?? []).compactMap(Sensor.Service.init)
-        )
-    }
-    
-}
-
-extension Sensor.Service {
-    
-    init?(_ service: CBService) {
-        switch service.uuid {
-        case CBUUID.Service.heartRate:
-            self = .heartRate
-        default:
-            return nil
-        }
-    }
-    
-    var bluetoothID: CBUUID {
-        switch self {
-        case .heartRate:
-            return CBUUID.Service.heartRate
-        }
-    }
-    
-}
+//extension BluetoothStore: SensorStore {
+//    
+//    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
+//        AsyncStream<CBPeripheral> { continuation in
+//            self.scanContinuation?.finish()
+//            self.scanContinuation = continuation
+//            Task {
+//                guard await state == .poweredOn else {
+//                    continuation.finish()
+//                    return
+//                }
+//
+//                print("Start scan")
+//                central.scanForPeripherals(withServices: services.map(\.bluetoothID))
+//            }
+//        }
+//        .map(Sensor.init)
+//        .makeAsyncStream {
+//            self.central.stopScan()
+//            self.peripherals = self.peripherals.filter { $0.value.state != .disconnected }
+//        }
+//    }
+//    
+//    func connect(to sensor: Sensor) async throws {
+//        enum ConnectError: Error, CustomStringConvertible {
+//            case retrievePeripheral
+//            
+//            var description: String {
+//                switch self {
+//                case .retrievePeripheral: return "Failed to retrieve peripheral"
+//                }
+//            }
+//        }
+//        guard let peripheral = peripherals[sensor.id] else {
+//            throw ConnectError.retrievePeripheral
+//        }
+//        
+//        print("Connecting to \(peripheral.name!)")
+//        try await withCheckedThrowingContinuation { continuation in
+//            self.connectContinuation[peripheral.identifier] = continuation
+//            central.connect(peripheral)
+//        }
+//        print("Connected to '\(peripheral.name!)'")
+//    }
+//    
+//    func disconnect(from sensor: Sensor) async throws {
+//        enum DisconnectError: Error, CustomStringConvertible {
+//            case retrievePeripheral
+//            
+//            var description: String {
+//                switch self {
+//                case .retrievePeripheral: return "Failed to retrieve peripheral"
+//                }
+//            }
+//        }
+//        guard let peripheral = peripherals[sensor.id] else {
+//            throw DisconnectError.retrievePeripheral
+//        }
+//        
+//        print("Disconnecting from \(peripheral.name!)")
+//        try await withCheckedThrowingContinuation { continuation in
+//            self.disconnectContinuation[peripheral.identifier] = continuation
+//            central.cancelPeripheralConnection(peripheral)
+//        }
+//        print("Disconnected from '\(peripheral.name!)'")
+//    }
+//    
+//}
+//
+//extension SensorStore where Self == BluetoothStore {
+//    
+//    static var bluetooth: Self { Self() }
+//    
+//}
+//
+//extension Sensor {
+//    
+//    init(_ peripheral: CBPeripheral) {
+//        self.init(
+//            id: peripheral.identifier,
+//            name: peripheral.name!,
+//            services: (peripheral.services ?? []).compactMap(Sensor.Service.init)
+//        )
+//    }
+//    
+//}
+//
+//extension Sensor.Service {
+//    
+//    init?(_ service: CBService) {
+//        switch service.uuid {
+//        case CBUUID.Service.heartRate:
+//            self = .heartRate
+//        default:
+//            return nil
+//        }
+//    }
+//    
+//    var bluetoothID: CBUUID {
+//        switch self {
+//        case .heartRate:
+//            return CBUUID.Service.heartRate
+//        }
+//    }
+//    
+//}
 
 extension CBUUID {
     
