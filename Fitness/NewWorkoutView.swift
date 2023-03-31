@@ -10,10 +10,12 @@ import SwiftUI
 
 struct Sample: Equatable, Codable, Hashable {
     let date: Date
+    let metric: Workout.Metric
     let value: Int
     
-    init(_ value: Int) {
+    init(metric: Workout.Metric, value: Int) {
         self.date = Date()
+        self.metric = metric
         self.value = value
     }
 }
@@ -43,8 +45,7 @@ struct NewWorkoutView: View {
     @State private var status: Status = .ready
     @State private var duration: Duration = .milliseconds(0)
     
-    @State private var heartRateSamples: [Sample] = []
-    @State private var powerSamples: [Sample] = []
+    @State private var samples: [Sample] = []
     
     var body: some View {
         VStack {
@@ -58,9 +59,9 @@ struct NewWorkoutView: View {
                     }
                 }
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $heartRateSamples, selectedPeripherals: $selectedPeripherals, metric: .heartRate)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $samples, selectedPeripherals: $selectedPeripherals, metric: .heartRate)
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $powerSamples, selectedPeripherals: $selectedPeripherals, metric: .power)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $samples, selectedPeripherals: $selectedPeripherals, metric: .power)
             }
             
             Spacer()
@@ -112,7 +113,7 @@ struct NewWorkoutView: View {
     }
     
     private func stopWorkout() {
-        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, heartRateSamples: heartRateSamples, powerSamples: powerSamples)
+        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, samples: samples)
         addWorkout(workout)
         
         if isPresented {
@@ -152,7 +153,7 @@ struct WorkoutMetricView: View {
                         bluetoothStore: bluetoothStore
                     ) { value in
                         if let v = metric.format(value) {
-                            samples.append(.init(v))
+                            samples.append(.init(metric: metric, value: v))
                         }
 
                         return metric.description(value)
@@ -174,7 +175,7 @@ struct WorkoutMetricView: View {
 
 extension Workout {
     
-    enum Metric {
+    enum Metric: Equatable, Codable, Hashable {
         case heartRate
         case power
     }

@@ -53,22 +53,28 @@ struct Workout: Identifiable {
     
     let activeDuration: Duration
     
-    let heartRateSamples: [Sample]
-    let powerSamples: [Sample]
+    let samples: [Sample]
     
     var totalDuration: Duration {
         let seconds = end.timeIntervalSince(start)
         return .seconds(seconds)
     }
     
-    init(activity: Activity, start: Date, end: Date, activeDuration: Duration, heartRateSamples: [Sample], powerSamples: [Sample]) {
+    init(activity: Activity, start: Date, end: Date, activeDuration: Duration, samples: [Sample]) {
         self.id = UUID()
         self.activity = activity
         self.start = start
         self.end = end
         self.activeDuration = activeDuration
-        self.heartRateSamples = heartRateSamples
-        self.powerSamples = powerSamples
+        self.samples = samples
+    }
+    
+    var averageHeartRate: Int {
+        samples.filter { $0.metric == .heartRate }.map(\.value).average
+    }
+    
+    var averagePower: Int {
+        samples.filter { $0.metric == .power }.map(\.value).average
     }
     
 }
