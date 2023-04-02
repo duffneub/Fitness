@@ -30,8 +30,11 @@ class WorkoutBuilder: ObservableObject {
     }
     
     let activity: Activity
+    let bluetoothStore: BluetoothStore
     
     @Published var samples: [Sample] = []
+    @Published var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
+
     @Published private(set) var duration: Duration = .milliseconds(0)
     @Published private(set) var status: Status = .ready
     
@@ -39,8 +42,10 @@ class WorkoutBuilder: ObservableObject {
     private var accumulatedTime: Duration =  .milliseconds(0)
     private var timer: Timer?
     
-    init(activity: Activity) {
+    
+    init(activity: Activity, bluetoothStore: BluetoothStore) {
         self.activity = activity
+        self.bluetoothStore = bluetoothStore
     }
     
     func startWorkout() {
@@ -73,6 +78,29 @@ class WorkoutBuilder: ObservableObject {
     
     func stopWorkout() -> Workout {
         status = .complete
+        
+        if let peripheral = selectedPeripherals[CBUUID.Service.heartRate],
+           let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
+           let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
+        {
+            print("Stop observing \(char.description) of \(peripheral.name!)")
+            peripheral.setNotifyValue(false, for: char)
+            Task {
+                try? await bluetoothStore.cancelPeripheralConnection(peripheral)
+            }
+        }
+        
+        if let peripheral = selectedPeripherals[CBUUID.Service.cyclingPower],
+           let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.cyclingPower }),
+           let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.cyclingPowerMeasurement })
+        {
+            print("Stop observing \(char.description) of \(peripheral.name!)")
+            peripheral.setNotifyValue(false, for: char)
+            Task {
+                try? await bluetoothStore.cancelPeripheralConnection(peripheral)
+            }
+        }
+        
         return Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, samples: samples)
     }
     
@@ -88,10 +116,8 @@ struct NewWorkoutView: View {
     @ObservedObject private var builder: WorkoutBuilder
     let bluetoothStore: BluetoothStore
     
-    @State private var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
-    
     init(activity: Activity, bluetoothStore: BluetoothStore) {
-        builder = .init(activity: activity)
+        builder = .init(activity: activity, bluetoothStore: bluetoothStore)
         self.bluetoothStore = bluetoothStore
     }
     
@@ -105,9 +131,9 @@ struct NewWorkoutView: View {
                     Text(builder.duration.formatted())
                 }
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $selectedPeripherals, metric: .heartRate)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $builder.selectedPeripherals, metric: .heartRate)
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $selectedPeripherals, metric: .power)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $builder.selectedPeripherals, metric: .power)
             }
             
             Spacer()
@@ -152,25 +178,14 @@ struct NewWorkoutView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Dismiss") {
-                    selectedPeripherals.values.forEach { peripheral in
-                        Task {
-                            if selectedPeripherals[CBUUID.Service.heartRate] != nil,
-                               let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
-                               let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
-                            {
-                                print("Stop observing \(char.description) of \(peripheral.name!)")
-                                peripheral.setNotifyValue(false, for: char)
+                    Task {
+                        _ = builder.stopWorkout()
+
+                        if isPresented {
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(0.3))
+                                dismiss()
                             }
-                            if selectedPeripherals[CBUUID.Service.cyclingPower] != nil,
-                               let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.cyclingPower }),
-                               let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.cyclingPowerMeasurement })
-                            {
-                                print("Stop observing \(char.description) of \(peripheral.name!)")
-                                peripheral.setNotifyValue(false, for: char)
-                            }
-                            try? await bluetoothStore.cancelPeripheralConnection(peripheral)
-                            
-                            dismiss()
                         }
                     }
                 }
