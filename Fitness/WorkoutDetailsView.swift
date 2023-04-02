@@ -45,7 +45,8 @@ struct WorkoutDetailsView: View {
 extension [Int] {
     
     var average: Int {
-        reduce(0, +) / count
+        let sum = reduce(0, +)
+        return sum > 0 ? sum / count : 0
     }
     
 }

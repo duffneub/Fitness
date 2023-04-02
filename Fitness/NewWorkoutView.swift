@@ -20,7 +20,7 @@ struct Sample: Equatable, Codable, Hashable {
     }
 }
 
-struct NewWorkoutView: View {
+class WorkoutBuilder: ObservableObject {
     
     enum Status {
         case ready
@@ -31,21 +31,69 @@ struct NewWorkoutView: View {
     
     let activity: Activity
     
+    @Published var samples: [Sample] = []
+    @Published private(set) var duration: Duration = .milliseconds(0)
+    @Published private(set) var status: Status = .ready
+    
+    private var start: Date?
+    private var accumulatedTime: Duration =  .milliseconds(0)
+    private var timer: Timer?
+    
+    init(activity: Activity) {
+        self.activity = activity
+    }
+    
+    func startWorkout() {
+        guard start == nil else { return }
+        let now = Date()
+        start = now
+        
+        timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
+            let seconds = Date().timeIntervalSince(now)
+            self.duration = self.accumulatedTime + .seconds(seconds)
+        }
+        status = .inProgress
+    }
+    
+    func pause() {
+        timer?.invalidate()
+        accumulatedTime = duration
+        status = .paused
+    }
+    
+    func resume() {
+        let now = Date()
+        
+        timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
+            let seconds = Date().timeIntervalSince(now)
+            self.duration = self.accumulatedTime + .seconds(seconds)
+        }
+        status = .inProgress
+    }
+    
+    func stopWorkout() -> Workout {
+        status = .complete
+        return Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, samples: samples)
+    }
+    
+}
+
+struct NewWorkoutView: View {
+    
     @Environment(\.addWorkout) var addWorkout
     
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
     
+    @ObservedObject private var builder: WorkoutBuilder
     let bluetoothStore: BluetoothStore
     
     @State private var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
     
-    @State private var start: Date?
-    
-    @State private var status: Status = .ready
-    @State private var duration: Duration = .milliseconds(0)
-    
-    @State private var samples: [Sample] = []
+    init(activity: Activity, bluetoothStore: BluetoothStore) {
+        builder = .init(activity: activity)
+        self.bluetoothStore = bluetoothStore
+    }
     
     var body: some View {
         VStack {
@@ -54,21 +102,53 @@ struct NewWorkoutView: View {
                     Text("Duration")
                         .font(.headline)
                     Spacer()
-                    Stopwatch(duration: $duration, isRunning: status == .inProgress) {
-                        Text(duration.formatted())
-                    }
+                    Text(builder.duration.formatted())
                 }
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $samples, selectedPeripherals: $selectedPeripherals, metric: .heartRate)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $selectedPeripherals, metric: .heartRate)
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $samples, selectedPeripherals: $selectedPeripherals, metric: .power)
+                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $selectedPeripherals, metric: .power)
             }
             
             Spacer()
             
-            StartStopControls(status: $status)
+            Group {
+                switch builder.status {
+                case .ready:
+                    Button("Start") {
+                        builder.startWorkout()
+                    }
+                case .inProgress:
+                    Button("Pause") {
+                        builder.pause()
+                    }
+                case .paused:
+                    HStack {
+                        Button("Resume") {
+                            builder.resume()
+                        }
+                        .buttonStyle(BorderedButtonStyle())
+                        
+                        Button("Stop") {
+                            let workout = builder.stopWorkout()
+                            addWorkout(workout)
+                            
+                            if isPresented {
+                                Task { @MainActor in
+                                    try? await Task.sleep(for: .seconds(0.3))
+                                    dismiss()
+                                }
+                            }
+                        }
+                    }
+                case .complete:
+                    EmptyView()
+                }
+            }
+            .buttonStyle(BorderedProminentButtonStyle())
+            .controlSize(.large)
         }
-        .navigationTitle(activity.name)
+        .navigationTitle(builder.activity.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Dismiss") {
@@ -94,32 +174,6 @@ struct NewWorkoutView: View {
                         }
                     }
                 }
-            }
-        }
-        .onChange(of: status) { newStatus in
-            switch status {
-            case .inProgress:
-                startWorkout()
-            case .complete:
-                stopWorkout()
-            case .ready, .paused:
-                break
-            }
-        }
-    }
-    
-    private func startWorkout() {
-        start = start ?? Date()
-    }
-    
-    private func stopWorkout() {
-        let workout = Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, samples: samples)
-        addWorkout(workout)
-        
-        if isPresented {
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(0.3))
-                dismiss()
             }
         }
     }
@@ -380,90 +434,6 @@ struct Sensor: Identifiable {
 
 extension Sensor: Equatable {}
 extension Sensor.Service: Equatable {}
-
-struct StartStopControls: View {
-    
-    @Binding var status: NewWorkoutView.Status
-    
-    var body: some View {
-        Group {
-            switch status {
-            case .ready:
-                Button("Start") {
-                    status = .inProgress
-                }
-            case .inProgress:
-                Button("Pause") {
-                    status = .paused
-                }
-            case .paused:
-                HStack {
-                    Button("Resume") {
-                        status = .inProgress
-                    }
-                    .buttonStyle(BorderedButtonStyle())
-                    
-                    Button("Stop") {
-                        status = .complete
-                    }
-                }
-            case .complete:
-                EmptyView()
-            }
-        }
-        .buttonStyle(BorderedProminentButtonStyle())
-        .controlSize(.large)
-    }
-    
-}
-
-struct Stopwatch<Label: View>: View {
-    
-    @Binding var duration: Duration
-    var isRunning: Bool
-    let label: () -> Label
-    
-    @State private var accumulatedTime: Duration
-    @State private var timer: Timer?
-    
-    init(
-        duration: Binding<Duration>,
-        isRunning: Bool,
-        @ViewBuilder label: @escaping () -> Label
-    ) {
-        self._duration = duration
-        self.isRunning = isRunning
-        self.label = label
-        
-        _accumulatedTime = .init(initialValue: duration.wrappedValue)
-    }
-    
-    var body: some View {
-        label()
-            .onChange(of: isRunning) { isRunning in
-                guard isRunning else {
-                    pause()
-                    return
-                }
-                
-                resume()
-            }
-    }
-    
-    private func resume() {
-        let now = Date()
-        timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
-            let seconds = Date().timeIntervalSince(now)
-            self.duration = self.accumulatedTime + .seconds(seconds)
-        }
-    }
-    
-    private func pause() {
-        timer?.invalidate()
-        accumulatedTime = duration
-    }
-    
-}
 
 // MARK: - Preview
 
