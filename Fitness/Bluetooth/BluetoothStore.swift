@@ -50,6 +50,11 @@ extension BluetoothStore {
                     continuation.finish()
                     return
                 }
+                
+                continuation.onTermination = { @Sendable _ in
+                    print("Stop scan")
+                    self.central.stopScan()
+                }
 
                 print("Start scan")
                 central.scanForPeripherals(withServices: serviceUUIDs)

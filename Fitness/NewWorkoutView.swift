@@ -20,6 +20,14 @@ struct Sample: Equatable, Codable, Hashable {
     }
 }
 
+extension Sample: CustomStringConvertible {
+    
+    var description: String {
+        metric.description(value)
+    }
+    
+}
+
 class WorkoutBuilder: ObservableObject {
     
     enum Status {
@@ -98,11 +106,9 @@ class PeripheralManager: ObservableObject {
         self.bluetoothStore = bluetoothStore
     }
     
-    func discoverPeripherals(withService service: CBUUID) {
-        Task {
-            for await peripheral in bluetoothStore.peripherals(withServices: [service]) {
-                peripheralMap[peripheral.identifier] = peripheral
-            }
+    func discoverPeripherals(withService service: CBUUID) async {
+        for await peripheral in bluetoothStore.peripherals(withServices: [service]) {
+            peripheralMap[peripheral.identifier] = peripheral
         }
     }
     
@@ -127,10 +133,10 @@ class PeripheralManager: ObservableObject {
         }
     }
     
-    func something(for metric: Workout.Metric, formatter: @escaping (Data?) -> String) -> Something? {
+    func something(for metric: Workout.Metric) -> Something? {
         guard let peripheral = selectedPeripherals[metric.serviceID] else { return nil}
         
-        return Something(peripheral: .init(peripheral), formatter: formatter)
+        return Something(peripheral: .init(peripheral))
     }
     
     func disconnectAllDevices() {
@@ -259,17 +265,13 @@ struct WorkoutMetricView: View {
     @Binding var samples: [Sample]
     let metric: Workout.Metric
     
+    @State private var latestSample: Sample?
+    
     var body: some View {
         NavigationLink {
             FindDevicesView(service: metric.serviceID, peripheralManager: peripheralManager)
         } label: {
-            if let something = peripheralManager.something(for: metric) { value in
-                if let v = metric.format(value) {
-                    samples.append(.init(metric: metric, value: v))
-                }
-
-                return metric.description(value)
-            } {
+            if let something = peripheralManager.something(for: metric) {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("\(metric.title)")
@@ -279,10 +281,17 @@ struct WorkoutMetricView: View {
                     }
                     Spacer()
                     
-                    Text(something.value)
-                        .onAppear {
-                            something.setNotify(true, metric: metric)
+                    Text("\(latestSample?.description ?? "--")")
+                }
+                .task {
+                    for await sample in something.samples(for: metric) {
+                        if let sample {
+                            samples.append(sample)
+                            self.latestSample = sample
                         }
+                    }
+                    
+                    
                 }
             } else {
                 HStack {
@@ -315,6 +324,15 @@ extension Workout.Metric {
             return "Heart Rate"
         case .power:
             return "Power"
+        }
+    }
+    
+    func description(_ value: Int) -> String {
+        switch self {
+        case .heartRate:
+            return "\(value) bpm"
+        case .power:
+            return "\(value) watts"
         }
     }
     
@@ -376,42 +394,32 @@ extension Workout.Metric {
         }
     }
     
-    func description(_ value: Data?) -> String {
-        switch self {
-        case .heartRate:
-            return format(value).map { "\($0) bpm" } ?? "--"
-        case .power:
-            return format(value).map { "\($0) watts" } ?? "--"
-        }
-    }
-    
 }
 
 @MainActor
 class Something: ObservableObject {
     
     let peripheral: Peripheral
-    let formatter: (Data?) -> String
     
-    @Published private(set) var value: String = "--"
-    
-    init(peripheral: Peripheral, formatter: @escaping (Data?) -> String) {
+    init(peripheral: Peripheral) {
         self.peripheral = peripheral
-        self.formatter = formatter
     }
     
-    func setNotify(_ on: Bool, metric: Workout.Metric) {
-        Task {
-            do {
-                let service = try await peripheral.discoverServices([metric.serviceID])
-                    .first(where: { $0.uuid == metric.serviceID })!
-                let characteristic = try await peripheral.discoverCharacteristics([metric.characteristicID], for: service)
-                    .first(where: { $0.uuid == metric.characteristicID })!
-                for try await value in peripheral.value(for: characteristic) {
-                    self.value = formatter(value)
+    func samples(for metric: Workout.Metric) -> AsyncStream<Sample?> {
+        AsyncStream<Sample?> { continuation in
+            Task {
+                do {
+                    let service = try await peripheral.discoverServices([metric.serviceID])
+                        .first(where: { $0.uuid == metric.serviceID })!
+                    let characteristic = try await peripheral.discoverCharacteristics([metric.characteristicID], for: service)
+                        .first(where: { $0.uuid == metric.characteristicID })!
+                    for try await value in peripheral.value(for: characteristic) {
+                        guard let value = metric.format(value) else { continue }
+                        continuation.yield(.init(metric: metric, value: value))
+                    }
+                } catch {
+                    print("Failed -- \(error)")
                 }
-            } catch {
-                print("Failed -- \(error)")
             }
         }
     }
@@ -451,8 +459,8 @@ struct FindDevicesView: View {
                 
         }
         .navigationTitle("Devices…")
-        .onAppear {
-            peripheralManager.discoverPeripherals(withService: service)
+        .task {
+            await peripheralManager.discoverPeripherals(withService: service)
         }
     }
     
