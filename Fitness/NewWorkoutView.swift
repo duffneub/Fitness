@@ -37,6 +37,17 @@ class WorkoutBuilder: ObservableObject {
         case complete
     }
     
+    struct Event {
+        
+        enum `Type` {
+            case pause
+            case resume
+        }
+        
+        let date: Date
+        let type: `Type`
+    }
+    
     let activity: Activity
     
     @Published var samples: [Sample] = []
@@ -47,7 +58,7 @@ class WorkoutBuilder: ObservableObject {
     private var start: Date?
     private var accumulatedTime: Duration =  .milliseconds(0)
     private var timer: Timer?
-    
+    private var events: [Event] = []
     
     init(activity: Activity) {
         self.activity = activity
@@ -66,6 +77,7 @@ class WorkoutBuilder: ObservableObject {
     }
     
     func pause() {
+        events.append(.init(date: Date(), type: .pause))
         timer?.invalidate()
         accumulatedTime = duration
         status = .paused
@@ -73,6 +85,7 @@ class WorkoutBuilder: ObservableObject {
     
     func resume() {
         let now = Date()
+        events.append(.init(date: now, type: .resume))
         
         timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
             let seconds = Date().timeIntervalSince(now)
@@ -82,9 +95,62 @@ class WorkoutBuilder: ObservableObject {
     }
     
     func stopWorkout() -> Workout {
-        status = .complete
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .long
+        
         let end = Date()
-        return Workout(activity: activity, start: start ?? end, end: end, activeDuration: duration, samples: samples)
+        
+        print("Workout started: \(formatter.string(from: start ?? end))")
+        
+        for event in events {
+            switch event.type {
+            case .pause:
+                print("Workout paused: \(formatter.string(from: event.date))")
+            case .resume:
+                print("Workout resumed: \(formatter.string(from: event.date))")
+            }
+        }
+        
+        print("Workout ended: \(formatter.string(from: end))")
+        
+        let formatter2 = DateComponentsFormatter()
+        formatter2.allowedUnits = [.day, .hour, .minute, .second]
+        
+        let totalDuration = end.timeIntervalSince((start ?? end))
+        print("Total duration: \(formatter2.string(from: totalDuration)!)")
+        
+        var activeSamples: [Sample] = []
+        
+        var activeDuration: TimeInterval = 0
+        var lastResume = start ?? end
+        for event in events {
+            switch event.type {
+            case .pause:
+                let range = lastResume...event.date
+                activeSamples.append(contentsOf: samples.filter { range.contains($0.date) })
+                activeDuration += event.date.timeIntervalSince(lastResume)
+            case .resume:
+                lastResume = event.date
+            }
+        }
+        print("Active Duration: \(formatter2.string(from: activeDuration)!)")
+        
+        var pauseDuration: TimeInterval = 0
+        var lastPause: Date?
+        for event in events {
+            switch event.type {
+            case .pause:
+                lastPause = event.date
+            case .resume:
+                pauseDuration += event.date.timeIntervalSince(lastPause!)
+            }
+        }
+        pauseDuration += end.timeIntervalSince(lastPause!)
+        print("Pause Duration: \(formatter2.string(from: activeDuration)!)")
+        
+        status = .complete
+        return Workout(activity: activity, start: start ?? end, end: end, activeDuration: .seconds(activeDuration), samples: activeSamples)
     }
     
 }
@@ -363,14 +429,23 @@ extension Workout.Metric {
         switch self {
         case .heartRate:
             guard let value = value, let flags = value.first else { return nil }
+            
+            print("value: \(value)")
+            print("flags: \(flags)")
 
-            let is16Bit = (flags & 0b10000000) != 0
+            let isContactSupported = (flags & 0b00000010) != 0
+            let isContactDetected = (flags & 0b00000100) != 0
+            
+            guard isContactSupported && isContactDetected else {
+                print("Contact is not detected")
+                return nil
+            }
+            
+            let is16Bit = (flags & 0b00000001) != 0
             let bpm = is16Bit
                 ? Int(value[1...2].withUnsafeBytes { $0.load(as: UInt16.self) })
                 : Int(value[1])
             
-            print("value: \(value)")
-            print("flags: \(flags)")
             print("is16Bit: \(is16Bit)")
             
             print("\(title):")
