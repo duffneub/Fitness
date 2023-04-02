@@ -94,13 +94,13 @@ class PeripheralManager: ObservableObject {
     
     let bluetoothStore: BluetoothStore
     
-    var peripherals: [CBPeripheral] {
+    var peripherals: [Something] {
         Array(peripheralMap.values)
     }
     
     @Published var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
     
-    @Published private var peripheralMap: [UUID: CBPeripheral] = [:]
+    @Published private var peripheralMap: [UUID: Something] = [:]
     
     init(bluetoothStore: BluetoothStore) {
         self.bluetoothStore = bluetoothStore
@@ -108,11 +108,12 @@ class PeripheralManager: ObservableObject {
     
     func discoverPeripherals(withService service: CBUUID) async {
         for await peripheral in bluetoothStore.peripherals(withServices: [service]) {
-            peripheralMap[peripheral.identifier] = peripheral
+            peripheralMap[peripheral.identifier] = Something(peripheral: .init(peripheral))
         }
     }
     
-    func toggleConnection(_ peripheral: CBPeripheral, for service: CBUUID) {
+    func toggleConnection(_ something: Something, for service: CBUUID) {
+        let peripheral = something.peripheral.peripheral
         Task {
             if peripheral.state == .disconnected {
                 do {
@@ -396,13 +397,50 @@ extension Workout.Metric {
     
 }
 
+extension CBPeripheralState: CustomStringConvertible {
+    
+    public var description: String {
+        
+        switch self {
+        case .disconnected:
+            return "Disconnected"
+        case .connecting:
+            return "Connecting"
+        case .connected:
+            return "Connected"
+        case .disconnecting:
+            return "Disconnecting"
+        @unknown default:
+            return "Unknown"
+        }
+        
+    }
+    
+}
+
 @MainActor
 class Something: ObservableObject {
     
     let peripheral: Peripheral
     
+    private var observation: NSKeyValueObservation?
+    
+    var name: String {
+        peripheral.peripheral.name!
+    }
+    
+    var state: CBPeripheralState {
+        return peripheral.peripheral.state
+    }
+    
     init(peripheral: Peripheral) {
         self.peripheral = peripheral
+        
+        observation = peripheral.peripheral.observe(\.state) { peripheral, _ in
+            Task { @MainActor in
+                self.objectWillChange.send()
+            }
+        }
     }
     
     func samples(for metric: Workout.Metric) -> AsyncStream<Sample?> {
@@ -432,28 +470,11 @@ struct FindDevicesView: View {
     @ObservedObject var peripheralManager: PeripheralManager
     
     var body: some View {
-        List(peripheralManager.peripherals, id: \.identifier) { peripheral in
+        List(peripheralManager.peripherals, id: \.peripheral.peripheral) { peripheral in
             Button {
                 peripheralManager.toggleConnection(peripheral, for: service)
             } label: {
-                HStack {
-                    Text(peripheral.name!)
-                    Spacer()
-                    
-                    switch peripheral.state {
-                    case .disconnected:
-                        EmptyView()
-                    case .connecting:
-                        ProgressView()
-                    case .connected:
-                        Image(systemName: "checkmark")
-                            .foregroundColor(.accentColor)
-                    case .disconnecting:
-                        EmptyView()
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
+                DeviceView(something: peripheral)
             }
             .foregroundColor(.primary)
                 
@@ -461,6 +482,33 @@ struct FindDevicesView: View {
         .navigationTitle("Devices…")
         .task {
             await peripheralManager.discoverPeripherals(withService: service)
+        }
+    }
+    
+}
+
+struct DeviceView: View {
+    
+    @ObservedObject var something: Something
+    
+    var body: some View {
+        HStack {
+            Text(something.name)
+            Spacer()
+            
+            switch something.state {
+            case .disconnected:
+                EmptyView()
+            case .connecting:
+                ProgressView()
+            case .connected:
+                Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+            case .disconnecting:
+                EmptyView()
+            @unknown default:
+                EmptyView()
+            }
         }
     }
     

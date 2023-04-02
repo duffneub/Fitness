@@ -116,7 +116,9 @@ extension BluetoothStore: CBCentralManagerDelegate {
         advertisementData: [String : Any],
         rssi RSSI: NSNumber
     ) {
-        print("Discovered \(peripheral.name!)")
+        print("Discovered \(peripheral)")
+        print("Advertisement Data: \(advertisementData)")
+        print("RSSI: \(RSSI)")
         scanContinuation?.yield(peripheral)
     }
     
