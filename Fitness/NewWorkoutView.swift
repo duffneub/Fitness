@@ -30,10 +30,8 @@ class WorkoutBuilder: ObservableObject {
     }
     
     let activity: Activity
-    let bluetoothStore: BluetoothStore
     
     @Published var samples: [Sample] = []
-    @Published var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
 
     @Published private(set) var duration: Duration = .milliseconds(0)
     @Published private(set) var status: Status = .ready
@@ -43,9 +41,8 @@ class WorkoutBuilder: ObservableObject {
     private var timer: Timer?
     
     
-    init(activity: Activity, bluetoothStore: BluetoothStore) {
+    init(activity: Activity) {
         self.activity = activity
-        self.bluetoothStore = bluetoothStore
     }
     
     func startWorkout() {
@@ -78,7 +75,65 @@ class WorkoutBuilder: ObservableObject {
     
     func stopWorkout() -> Workout {
         status = .complete
+        let end = Date()
+        return Workout(activity: activity, start: start ?? end, end: end, activeDuration: duration, samples: samples)
+    }
+    
+}
+
+@MainActor
+class PeripheralManager: ObservableObject {
+    
+    let bluetoothStore: BluetoothStore
+    
+    var peripherals: [CBPeripheral] {
+        Array(peripheralMap.values)
+    }
+    
+    @Published var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
+    
+    @Published private var peripheralMap: [UUID: CBPeripheral] = [:]
+    
+    init(bluetoothStore: BluetoothStore) {
+        self.bluetoothStore = bluetoothStore
+    }
+    
+    func discoverPeripherals(withService service: CBUUID) {
+        Task {
+            for await peripheral in bluetoothStore.peripherals(withServices: [service]) {
+                peripheralMap[peripheral.identifier] = peripheral
+            }
+        }
+    }
+    
+    func toggleConnection(_ peripheral: CBPeripheral, for service: CBUUID) {
+        Task {
+            if peripheral.state == .disconnected {
+                do {
+                    
+                    try await bluetoothStore.connect(peripheral)
+                    selectedPeripherals[service] = peripheral
+                } catch {
+                    print("Failed to connect to '\(peripheral.name!)' -- \(error)")
+                }
+            } else {
+                do {
+                    try await bluetoothStore.cancelPeripheralConnection(peripheral)
+                    selectedPeripherals[service] = nil
+                } catch {
+                    print("Failed to connect to '\(peripheral.name!)' -- \(error)")
+                }
+            }
+        }
+    }
+    
+    func something(for metric: Workout.Metric, formatter: @escaping (Data?) -> String) -> Something? {
+        guard let peripheral = selectedPeripherals[metric.serviceID] else { return nil}
         
+        return Something(peripheral: .init(peripheral), formatter: formatter)
+    }
+    
+    func disconnectAllDevices() {
         if let peripheral = selectedPeripherals[CBUUID.Service.heartRate],
            let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
            let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
@@ -100,8 +155,6 @@ class WorkoutBuilder: ObservableObject {
                 try? await bluetoothStore.cancelPeripheralConnection(peripheral)
             }
         }
-        
-        return Workout(activity: activity, start: start!, end: Date(), activeDuration: duration, samples: samples)
     }
     
 }
@@ -114,10 +167,13 @@ struct NewWorkoutView: View {
     @Environment(\.dismiss) var dismiss
     
     @ObservedObject private var builder: WorkoutBuilder
+    @ObservedObject private var peripheralManager: PeripheralManager
+    
     let bluetoothStore: BluetoothStore
     
     init(activity: Activity, bluetoothStore: BluetoothStore) {
-        builder = .init(activity: activity, bluetoothStore: bluetoothStore)
+        self.builder = .init(activity: activity)
+        self.peripheralManager = .init(bluetoothStore: bluetoothStore)
         self.bluetoothStore = bluetoothStore
     }
     
@@ -131,9 +187,9 @@ struct NewWorkoutView: View {
                     Text(builder.duration.formatted())
                 }
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $builder.selectedPeripherals, metric: .heartRate)
+                WorkoutMetricView(peripheralManager: peripheralManager, bluetoothStore: bluetoothStore, samples: $builder.samples, metric: .heartRate)
                 
-                WorkoutMetricView(bluetoothStore: bluetoothStore, samples: $builder.samples, selectedPeripherals: $builder.selectedPeripherals, metric: .power)
+                WorkoutMetricView(peripheralManager: peripheralManager, bluetoothStore: bluetoothStore, samples: $builder.samples, metric: .power)
             }
             
             Spacer()
@@ -158,6 +214,7 @@ struct NewWorkoutView: View {
                         Button("Stop") {
                             let workout = builder.stopWorkout()
                             addWorkout(workout)
+                            peripheralManager.disconnectAllDevices()
                             
                             if isPresented {
                                 Task { @MainActor in
@@ -180,6 +237,7 @@ struct NewWorkoutView: View {
                 Button("Dismiss") {
                     Task {
                         _ = builder.stopWorkout()
+                        peripheralManager.disconnectAllDevices()
 
                         if isPresented {
                             Task { @MainActor in
@@ -196,37 +254,35 @@ struct NewWorkoutView: View {
 
 struct WorkoutMetricView: View {
     
+    @ObservedObject var peripheralManager: PeripheralManager
     let bluetoothStore: BluetoothStore
     @Binding var samples: [Sample]
-    @Binding var selectedPeripherals: [CBUUID: CBPeripheral]
     let metric: Workout.Metric
     
     var body: some View {
         NavigationLink {
-            FindDevicesView(services: [metric.serviceID], selection: $selectedPeripherals, bluetoothStore: bluetoothStore)
+            FindDevicesView(service: metric.serviceID, peripheralManager: peripheralManager)
         } label: {
-            if let peripheral = selectedPeripherals[metric.serviceID] {
+            if let something = peripheralManager.something(for: metric) { value in
+                if let v = metric.format(value) {
+                    samples.append(.init(metric: metric, value: v))
+                }
+
+                return metric.description(value)
+            } {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("\(metric.title)")
                             .font(.headline)
-                        Text(peripheral.name!)
+                        Text(something.peripheral.peripheral.name!)
                             .font(.caption)
                     }
                     Spacer()
                     
-                    CharacteristicView(
-                        peripheral: .init(peripheral),
-                        service: metric.serviceID,
-                        characteristic: metric.characteristicID,
-                        bluetoothStore: bluetoothStore
-                    ) { value in
-                        if let v = metric.format(value) {
-                            samples.append(.init(metric: metric, value: v))
+                    Text(something.value)
+                        .onAppear {
+                            something.setNotify(true, metric: metric)
                         }
-
-                        return metric.description(value)
-                    }
                 }
             } else {
                 HStack {
@@ -331,68 +387,46 @@ extension Workout.Metric {
     
 }
 
-struct CharacteristicView: View {
+@MainActor
+class Something: ObservableObject {
     
     let peripheral: Peripheral
-    let service: CBUUID
-    let characteristic: CBUUID
-    let bluetoothStore: BluetoothStore
     let formatter: (Data?) -> String
     
-    @State private var value: String = "--"
+    @Published private(set) var value: String = "--"
     
-    var body: some View {
-        Text(value)
-            .task {
-                do {
-                    let service = try await peripheral.discoverServices([service])
-                        .first(where: { $0.uuid == self.service })!
-                    let characteristic = try await peripheral.discoverCharacteristics([characteristic], for: service)
-                        .first(where: { $0.uuid == self.characteristic })!
-                    for try await value in peripheral.value(for: characteristic) {
-                        self.value = formatter(value)
-                    }
-                } catch {
-                    print("Failed -- \(error)")
+    init(peripheral: Peripheral, formatter: @escaping (Data?) -> String) {
+        self.peripheral = peripheral
+        self.formatter = formatter
+    }
+    
+    func setNotify(_ on: Bool, metric: Workout.Metric) {
+        Task {
+            do {
+                let service = try await peripheral.discoverServices([metric.serviceID])
+                    .first(where: { $0.uuid == metric.serviceID })!
+                let characteristic = try await peripheral.discoverCharacteristics([metric.characteristicID], for: service)
+                    .first(where: { $0.uuid == metric.characteristicID })!
+                for try await value in peripheral.value(for: characteristic) {
+                    self.value = formatter(value)
                 }
+            } catch {
+                print("Failed -- \(error)")
             }
+        }
     }
     
 }
 
 struct FindDevicesView: View {
     
-    let services: [CBUUID]
-    @Binding var selection: [CBUUID: CBPeripheral]
-    let bluetoothStore: BluetoothStore
-    
-    @State private var peripheralMap: [UUID: CBPeripheral] = [:]
-    
-    var peripherals: [CBPeripheral] {
-        Array(peripheralMap.values)
-    }
+    let service: CBUUID
+    @ObservedObject var peripheralManager: PeripheralManager
     
     var body: some View {
-        List(peripherals, id: \.identifier) { peripheral in
+        List(peripheralManager.peripherals, id: \.identifier) { peripheral in
             Button {
-                Task {
-                    
-                    if peripheral.state == .disconnected {
-                        do {
-                            try await bluetoothStore.connect(peripheral)
-                            selection[services.first!] = peripheral
-                        } catch {
-                            print("Failed to connect to '\(peripheral.name!)' -- \(error)")
-                        }
-                    } else {
-                        do {
-                            try await bluetoothStore.cancelPeripheralConnection(peripheral)
-                            selection[services.first!] = nil
-                        } catch {
-                            print("Failed to connect to '\(peripheral.name!)' -- \(error)")
-                        }
-                    }
-                }
+                peripheralManager.toggleConnection(peripheral, for: service)
             } label: {
                 HStack {
                     Text(peripheral.name!)
@@ -417,10 +451,8 @@ struct FindDevicesView: View {
                 
         }
         .navigationTitle("Devices…")
-        .task {
-            for await peripheral in bluetoothStore.peripherals(withServices: services) {
-                peripheralMap[peripheral.identifier] = peripheral
-            }
+        .onAppear {
+            peripheralManager.discoverPeripherals(withService: service)
         }
     }
     
