@@ -164,7 +164,7 @@ class PeripheralManager: ObservableObject {
         Array(peripheralMap.values)
     }
     
-    @Published var selectedPeripherals: [CBUUID: CBPeripheral] = [:]
+    @Published var selectedPeripherals: [Workout.Metric: Something] = [:]
     
     @Published private var peripheralMap: [UUID: Something] = [:]
     
@@ -172,42 +172,44 @@ class PeripheralManager: ObservableObject {
         self.bluetoothStore = bluetoothStore
     }
     
-    func discoverPeripherals(withService service: CBUUID) async {
-        for await peripheral in bluetoothStore.peripherals(withServices: [service]) {
-            peripheralMap[peripheral.identifier] = Something(peripheral: .init(peripheral))
+    func discoverPeripherals(withMetric metric: Workout.Metric) async {
+        for await (peripheral, serviceIDs) in bluetoothStore.peripherals(withServices: [metric.serviceID]) {
+            peripheralMap[peripheral.identifier] = Something(peripheral: .init(peripheral), serviceIDs: serviceIDs)
         }
     }
     
-    func toggleConnection(_ something: Something, for service: CBUUID) {
+    func peripherals(withMetric metric: Workout.Metric) -> [Something] {
+        Array(peripheralMap.values).filter { $0.serviceIDs.contains(metric.serviceID) }
+    }
+    
+    func toggleConnection(_ something: Something, for metric: Workout.Metric) {
         let peripheral = something.peripheral.peripheral
         Task {
             if peripheral.state == .disconnected {
                 do {
                     
                     try await bluetoothStore.connect(peripheral)
-                    selectedPeripherals[service] = peripheral
+                    selectedPeripherals[metric] = something
                 } catch {
-                    print("Failed to connect to '\(peripheral.name!)' -- \(error)")
+                    print("Failed to connect to '\(something.name)' -- \(error)")
                 }
             } else {
                 do {
                     try await bluetoothStore.cancelPeripheralConnection(peripheral)
-                    selectedPeripherals[service] = nil
+                    selectedPeripherals[metric] = nil
                 } catch {
-                    print("Failed to connect to '\(peripheral.name!)' -- \(error)")
+                    print("Failed to connect to '\(something.name)' -- \(error)")
                 }
             }
         }
     }
     
     func something(for metric: Workout.Metric) -> Something? {
-        guard let peripheral = selectedPeripherals[metric.serviceID] else { return nil}
-        
-        return Something(peripheral: .init(peripheral))
+        selectedPeripherals[metric]
     }
     
     func disconnectAllDevices() {
-        if let peripheral = selectedPeripherals[CBUUID.Service.heartRate],
+        if let peripheral = selectedPeripherals[.heartRate]?.peripheral.peripheral,
            let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.heartRate }),
            let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.heartRateMeasurement })
         {
@@ -218,7 +220,7 @@ class PeripheralManager: ObservableObject {
             }
         }
         
-        if let peripheral = selectedPeripherals[CBUUID.Service.cyclingPower],
+        if let peripheral = selectedPeripherals[.power]?.peripheral.peripheral,
            let service = peripheral.services?.first(where: { $0.uuid == CBUUID.Service.cyclingPower }),
            let char = service.characteristics?.first(where: { $0.uuid == CBUUID.Characteristic.cyclingPowerMeasurement })
         {
@@ -336,7 +338,7 @@ struct WorkoutMetricView: View {
     
     var body: some View {
         NavigationLink {
-            FindDevicesView(service: metric.serviceID, peripheralManager: peripheralManager)
+            FindDevicesView(metric: metric, peripheralManager: peripheralManager)
         } label: {
             if let something = peripheralManager.something(for: metric) {
                 HStack {
@@ -497,6 +499,7 @@ extension CBPeripheralState: CustomStringConvertible {
 class Something: ObservableObject {
     
     let peripheral: Peripheral
+    let serviceIDs: [CBUUID]
     
     private var observation: NSKeyValueObservation?
     
@@ -508,8 +511,9 @@ class Something: ObservableObject {
         return peripheral.peripheral.state
     }
     
-    init(peripheral: Peripheral) {
+    init(peripheral: Peripheral, serviceIDs: [CBUUID]) {
         self.peripheral = peripheral
+        self.serviceIDs = serviceIDs
         
         observation = peripheral.peripheral.observe(\.state) { peripheral, _ in
             Task { @MainActor in
@@ -541,13 +545,13 @@ class Something: ObservableObject {
 
 struct FindDevicesView: View {
     
-    let service: CBUUID
+    let metric: Workout.Metric
     @ObservedObject var peripheralManager: PeripheralManager
     
     var body: some View {
-        List(peripheralManager.peripherals, id: \.peripheral.peripheral) { peripheral in
+        List(peripheralManager.peripherals(withMetric: metric), id: \.peripheral.peripheral) { peripheral in
             Button {
-                peripheralManager.toggleConnection(peripheral, for: service)
+                peripheralManager.toggleConnection(peripheral, for: metric)
             } label: {
                 DeviceView(something: peripheral)
             }
@@ -556,7 +560,7 @@ struct FindDevicesView: View {
         }
         .navigationTitle("Devices…")
         .task {
-            await peripheralManager.discoverPeripherals(withService: service)
+            await peripheralManager.discoverPeripherals(withMetric: metric)
         }
     }
     

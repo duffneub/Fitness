@@ -13,7 +13,7 @@ class BluetoothStore: NSObject {
     private var central: CBCentralManager!
     
     private var stateContinuation: CheckedContinuation<CBManagerState, Never>?
-    private var scanContinuation: AsyncStream<CBPeripheral>.Continuation?
+    private var scanContinuation: AsyncStream<(CBPeripheral, [CBUUID])>.Continuation?
     private var connectContinuation: [UUID: CheckedContinuation<Void, Error>] = [:]
     private var disconnectContinuation: [UUID: CheckedContinuation<Void, Error>] = [:]
     
@@ -41,8 +41,8 @@ class BluetoothStore: NSObject {
 
 extension BluetoothStore {
     
-    func peripherals(withServices serviceUUIDs: [CBUUID]?, options: [String : Any]? = nil) -> AsyncStream<CBPeripheral> {
-        AsyncStream<CBPeripheral> { continuation in
+    func peripherals(withServices serviceUUIDs: [CBUUID]?, options: [String : Any]? = nil) -> AsyncStream<(CBPeripheral, [CBUUID])> {
+        AsyncStream<(CBPeripheral, [CBUUID])> { continuation in
             self.scanContinuation?.finish()
             self.scanContinuation = continuation
             Task {
@@ -119,7 +119,7 @@ extension BluetoothStore: CBCentralManagerDelegate {
         print("Discovered \(peripheral)")
         print("Advertisement Data: \(advertisementData)")
         print("RSSI: \(RSSI)")
-        scanContinuation?.yield(peripheral)
+        scanContinuation?.yield((peripheral, advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []))
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
