@@ -58,8 +58,8 @@ struct WorkoutDetailsView_Previews: PreviewProvider {
                 activity: .outdoorRun,
                 start: Date(),
                 end: Date().addingTimeInterval(60 * 60),
-                activeDuration: .seconds(60 * 45),
-                samples: []
+                samples: [],
+                events: []
             ))
         }
     }

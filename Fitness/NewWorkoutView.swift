@@ -37,17 +37,6 @@ class WorkoutBuilder: ObservableObject {
         case complete
     }
     
-    struct Event {
-        
-        enum `Type` {
-            case pause
-            case resume
-        }
-        
-        let date: Date
-        let type: `Type`
-    }
-    
     let activity: Activity
     
     @Published var samples: [Sample] = []
@@ -58,7 +47,7 @@ class WorkoutBuilder: ObservableObject {
     private var start: Date?
     private var accumulatedTime: Duration =  .milliseconds(0)
     private var timer: Timer?
-    private var events: [Event] = []
+    private var events: [Workout.Event] = []
     
     init(activity: Activity) {
         self.activity = activity
@@ -147,10 +136,10 @@ class WorkoutBuilder: ObservableObject {
             }
         }
         pauseDuration += end.timeIntervalSince(lastPause!)
-        print("Pause Duration: \(formatter2.string(from: activeDuration)!)")
+        print("Pause Duration: \(formatter2.string(from: pauseDuration)!)")
         
         status = .complete
-        return Workout(activity: activity, start: start ?? end, end: end, activeDuration: .seconds(activeDuration), samples: activeSamples)
+        return Workout(activity: activity, start: start ?? end, end: end, samples: activeSamples, events: events)
     }
     
 }
