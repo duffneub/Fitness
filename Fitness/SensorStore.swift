@@ -7,58 +7,58 @@
 
 import SwiftUI
 
-protocol SensorStore {
-    
-    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor>
-    func connect(to sensor: Sensor) async throws
-    func disconnect(from sensor: Sensor) async throws
-    
-}
-
-struct DefaultSensorStore: SensorStore {
-    
-    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
-        fatalError("`\(Self.self).\(#function)` is unimplemented")
-    }
-    
-    func connect(to sensor: Sensor) async throws {
-        fatalError("`\(Self.self).\(#function)` is unimplemented")
-    }
-    
-    func disconnect(from sensor: Sensor) async throws {
-        fatalError("`\(Self.self).\(#function)` is unimplemented")
-    }
-    
-}
-
-extension SensorStore where Self == DefaultSensorStore {
-    
-    static var automatic: Self { Self() }
-    
-}
-
-// MARK: - Environment
-
-private struct SensorStoreKey: EnvironmentKey {
-    static let defaultValue: SensorStore = .automatic
-}
-
-extension EnvironmentValues {
-    
-    var sensorStore: SensorStore {
-        get { self[SensorStoreKey.self] }
-        set { self[SensorStoreKey.self] = newValue }
-    }
-
-}
-
-extension View {
-    
-    func sensorStore<S : SensorStore>(_ scanner: S) -> some View {
-        environment(\.sensorStore, scanner)
-    }
-    
-}
+//protocol SensorStore {
+//    
+//    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor>
+//    func connect(to sensor: Sensor) async throws
+//    func disconnect(from sensor: Sensor) async throws
+//    
+//}
+//
+//struct DefaultSensorStore: SensorStore {
+//    
+//    func sensors(withServices services: ([Sensor.Service])) -> AsyncStream<Sensor> {
+//        fatalError("`\(Self.self).\(#function)` is unimplemented")
+//    }
+//    
+//    func connect(to sensor: Sensor) async throws {
+//        fatalError("`\(Self.self).\(#function)` is unimplemented")
+//    }
+//    
+//    func disconnect(from sensor: Sensor) async throws {
+//        fatalError("`\(Self.self).\(#function)` is unimplemented")
+//    }
+//    
+//}
+//
+//extension SensorStore where Self == DefaultSensorStore {
+//    
+//    static var automatic: Self { Self() }
+//    
+//}
+//
+//// MARK: - Environment
+//
+//private struct SensorStoreKey: EnvironmentKey {
+//    static let defaultValue: SensorStore = .automatic
+//}
+//
+//extension EnvironmentValues {
+//    
+//    var sensorStore: SensorStore {
+//        get { self[SensorStoreKey.self] }
+//        set { self[SensorStoreKey.self] = newValue }
+//    }
+//
+//}
+//
+//extension View {
+//    
+//    func sensorStore<S : SensorStore>(_ scanner: S) -> some View {
+//        environment(\.sensorStore, scanner)
+//    }
+//    
+//}
 
 // MARK: - Helpers
 
