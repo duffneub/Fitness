@@ -1,5 +1,5 @@
 //
-//  WorkoutBuilder.swift
+//  WorkoutSession.swift
 //  Fitness
 //
 //  Created by Duff Neubauer on 4/3/23.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-class WorkoutBuilder: ObservableObject {
+class WorkoutSession: ObservableObject {
     
     enum Status {
         case ready
@@ -23,7 +23,7 @@ class WorkoutBuilder: ObservableObject {
     @Published private(set) var duration: Duration = .milliseconds(0)
     @Published private(set) var status: Status = .ready
     
-    private var start: Date?
+    private var startDate: Date?
     private var accumulatedTime: Duration =  .milliseconds(0)
     private var timer: Timer?
     private var events: [Workout.Event] = []
@@ -32,10 +32,10 @@ class WorkoutBuilder: ObservableObject {
         self.activity = activity
     }
     
-    func startWorkout() {
-        guard start == nil else { return }
+    func start() {
+        guard startDate == nil else { return }
         let now = Date()
-        start = now
+        startDate = now
         
         timer = .scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
             let seconds = Date().timeIntervalSince(now)
@@ -62,13 +62,13 @@ class WorkoutBuilder: ObservableObject {
         status = .inProgress
     }
     
-    func stopWorkout() -> Workout {
+    func stop() -> Workout {
         let end = Date()
         status = .complete
         
         return Workout(
             activity: activity,
-            start: start ?? end,
+            start: startDate ?? end,
             end: end,
             samples: samples,
             events: events

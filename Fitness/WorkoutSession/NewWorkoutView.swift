@@ -15,13 +15,13 @@ struct NewWorkoutView: View {
     @Environment(\.isPresented) var isPresented
     @Environment(\.dismiss) var dismiss
     
-    @ObservedObject private var builder: WorkoutBuilder
+    @ObservedObject private var session: WorkoutSession
     @ObservedObject private var peripheralManager: PeripheralManager
     
     let bluetoothStore: BluetoothStore
     
     init(activity: Activity, bluetoothStore: BluetoothStore) {
-        self.builder = .init(activity: activity)
+        self.session = .init(activity: activity)
         self.peripheralManager = .init(bluetoothStore: bluetoothStore)
         self.bluetoothStore = bluetoothStore
     }
@@ -33,35 +33,35 @@ struct NewWorkoutView: View {
                     Text("Duration")
                         .font(.headline)
                     Spacer()
-                    Text(builder.duration.formatted())
+                    Text(session.duration.formatted())
                 }
                 
-                WorkoutMetricView(peripheralManager: peripheralManager, bluetoothStore: bluetoothStore, samples: $builder.samples, metric: .heartRate)
+                WorkoutMetricView(peripheralManager: peripheralManager, bluetoothStore: bluetoothStore, samples: $session.samples, metric: .heartRate)
                 
-                WorkoutMetricView(peripheralManager: peripheralManager, bluetoothStore: bluetoothStore, samples: $builder.samples, metric: .power)
+                WorkoutMetricView(peripheralManager: peripheralManager, bluetoothStore: bluetoothStore, samples: $session.samples, metric: .power)
             }
             
             Spacer()
             
             Group {
-                switch builder.status {
+                switch session.status {
                 case .ready:
                     Button("Start") {
-                        builder.startWorkout()
+                        session.start()
                     }
                 case .inProgress:
                     Button("Pause") {
-                        builder.pause()
+                        session.pause()
                     }
                 case .paused:
                     HStack {
                         Button("Resume") {
-                            builder.resume()
+                            session.resume()
                         }
                         .buttonStyle(BorderedButtonStyle())
                         
                         Button("Stop") {
-                            let workout = builder.stopWorkout()
+                            let workout = session.stop()
                             addWorkout(workout)
                             peripheralManager.disconnectAllDevices()
                             
@@ -80,12 +80,12 @@ struct NewWorkoutView: View {
             .buttonStyle(BorderedProminentButtonStyle())
             .controlSize(.large)
         }
-        .navigationTitle(builder.activity.name)
+        .navigationTitle(session.activity.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Dismiss") {
                     Task {
-                        _ = builder.stopWorkout()
+                        _ = session.stop()
                         peripheralManager.disconnectAllDevices()
 
                         if isPresented {
