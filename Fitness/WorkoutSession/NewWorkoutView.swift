@@ -20,8 +20,8 @@ struct NewWorkoutView: View {
     
     let bluetoothStore: BluetoothStore
     
-    init(activity: Activity, bluetoothStore: BluetoothStore) {
-        self.session = .init(activity: activity)
+    init(profile: WorkoutProfile, bluetoothStore: BluetoothStore) {
+        self.session = .init(activity: profile.activity)
         self.peripheralManager = .init(bluetoothStore: bluetoothStore)
         self.bluetoothStore = bluetoothStore
     }

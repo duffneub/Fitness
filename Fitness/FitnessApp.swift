@@ -109,12 +109,33 @@ extension View {
     
 }
 
+class Model: ObservableObject {
+    
+    @Published private(set) var profiles: [WorkoutProfile]
+    
+    // Should this be an ID?
+    @Published var currentProfile: WorkoutProfile?
+    
+    init() {
+        profiles = [
+           .init(activity: .indoorRide),
+           .init(activity: .indoorRun),
+           .init(activity: .outdoorRide),
+           .init(activity: .outdoorRun),
+       ]
+    }
+    
+}
+
 @main
 struct FitnessApp: App {
+    
+    @StateObject private var model = Model()
     
     var body: some Scene {
         WindowGroup {
             MainView()
+                .environmentObject(model)
                 .environment(\.workoutStore, .fileSystem(workoutsLocation))
         }
     }
@@ -160,7 +181,7 @@ struct MainView: View {
             .tag(Tab.workoutHistory)
             
             NavigationStack {
-                ActivityListView(activities: activities, bluetoothStore: bluetoothStore)
+                WorkoutProfilesView(bluetoothStore: bluetoothStore)
                     .onAddWorkout { workout in
                         workouts.append(workout)
                         
