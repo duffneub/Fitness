@@ -1,5 +1,5 @@
 //
-//  WorkoutProfilesView.swift
+//  WorkoutProfilesViewOld.swift
 //  Fitness
 //
 //  Created by Duff Neubauer on 3/7/23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct WorkoutProfilesView: View {
+struct WorkoutProfilesViewOld: View {
     
     @EnvironmentObject private var model: Model
     
@@ -37,7 +37,7 @@ struct WorkoutProfilesView: View {
 //struct ExerciseListView_Previews: PreviewProvider {
 //    static var previews: some View {
 //        NavigationStack {
-//            WorkoutProfilesView(activities: Activity.allCases)
+//            WorkoutProfilesViewOld(activities: Activity.allCases)
 //        }
 //    }
 //}

@@ -181,7 +181,7 @@ struct MainView: View {
             .tag(Tab.workoutHistory)
             
             NavigationStack {
-                WorkoutProfilesView(bluetoothStore: bluetoothStore)
+                WorkoutProfilesViewOld(bluetoothStore: bluetoothStore)
                     .onAddWorkout { workout in
                         workouts.append(workout)
                         

@@ -15,7 +15,7 @@
 		176BBB642927D920007BED71 /* FitnessUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176BBB632927D920007BED71 /* FitnessUITestsLaunchTests.swift */; };
 		1771843529C0AC550052CA5C /* WorkoutHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1771843429C0AC550052CA5C /* WorkoutHistoryView.swift */; };
 		1787B53829B77F26004B7AB9 /* FitnessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1787B53729B77F26004B7AB9 /* FitnessApp.swift */; };
-		1787B53A29B78104004B7AB9 /* WorkoutProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1787B53929B78104004B7AB9 /* WorkoutProfilesView.swift */; };
+		1787B53A29B78104004B7AB9 /* WorkoutProfilesViewOld.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1787B53929B78104004B7AB9 /* WorkoutProfilesViewOld.swift */; };
 		178D80EE29BA25E800DAD172 /* NewWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178D80ED29BA25E800DAD172 /* NewWorkoutView.swift */; };
 		17B7E18A29DBC00100C79846 /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B7E18929DBC00100C79846 /* WorkoutSession.swift */; };
 		17B7E18C29DBC05800C79846 /* Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B7E18B29DBC05800C79846 /* Workout.swift */; };
@@ -59,7 +59,7 @@
 		176BBB632927D920007BED71 /* FitnessUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		1771843429C0AC550052CA5C /* WorkoutHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryView.swift; sourceTree = "<group>"; };
 		1787B53729B77F26004B7AB9 /* FitnessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessApp.swift; sourceTree = "<group>"; };
-		1787B53929B78104004B7AB9 /* WorkoutProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfilesView.swift; sourceTree = "<group>"; };
+		1787B53929B78104004B7AB9 /* WorkoutProfilesViewOld.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfilesViewOld.swift; sourceTree = "<group>"; };
 		178D80ED29BA25E800DAD172 /* NewWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewWorkoutView.swift; sourceTree = "<group>"; };
 		17B7E18929DBC00100C79846 /* WorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSession.swift; sourceTree = "<group>"; };
 		17B7E18B29DBC05800C79846 /* Workout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workout.swift; sourceTree = "<group>"; };
@@ -177,7 +177,7 @@
 		17B7E19629E301D100C79846 /* WorkoutSession */ = {
 			isa = PBXGroup;
 			children = (
-				1787B53929B78104004B7AB9 /* WorkoutProfilesView.swift */,
+				1787B53929B78104004B7AB9 /* WorkoutProfilesViewOld.swift */,
 				178D80ED29BA25E800DAD172 /* NewWorkoutView.swift */,
 				17B7E18929DBC00100C79846 /* WorkoutSession.swift */,
 			);
@@ -350,7 +350,7 @@
 				17D3DCF929C9EFEF00D48A45 /* BluetoothStore.swift in Sources */,
 				17B7E19229DBC15100C79846 /* Something.swift in Sources */,
 				17D3DCFB29C9F04300D48A45 /* BluetoothManager.swift in Sources */,
-				1787B53A29B78104004B7AB9 /* WorkoutProfilesView.swift in Sources */,
+				1787B53A29B78104004B7AB9 /* WorkoutProfilesViewOld.swift in Sources */,
 				17B7E19029DBC0A100C79846 /* PeripheralManager.swift in Sources */,
 				178D80EE29BA25E800DAD172 /* NewWorkoutView.swift in Sources */,
 				17B7E19A29E3035200C79846 /* WorkoutProfile.swift in Sources */,
