@@ -18,3 +18,5 @@ struct WorkoutProfile: Identifiable {
     var name: String { activity.name }
     var image: String { activity.image }
 }
+
+extension WorkoutProfile: Equatable {}

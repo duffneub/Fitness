@@ -132,11 +132,43 @@ struct FitnessApp: App {
     
     @StateObject private var model = Model()
     
+    let profiles: [WorkoutProfile] = [
+        .init(activity: .outdoorRide),
+        .init(activity: .indoorRide),
+        .init(activity: .outdoorRun),
+    ]
+    
+    @State var isSelectingProfile = false
+    @State var selectedProfile: WorkoutProfile = .init(activity: .outdoorRide)
+    
     var body: some Scene {
         WindowGroup {
-            MainView()
-                .environmentObject(model)
-                .environment(\.workoutStore, .fileSystem(workoutsLocation))
+//            MainView()
+//                .environmentObject(model)
+//                .environment(\.workoutStore, .fileSystem(workoutsLocation))
+            
+            VStack {
+                Button("Change Workout") {
+                    isSelectingProfile = true
+                }
+            }
+            .sheet(isPresented: $isSelectingProfile) {
+                NavigationStack {
+                    WorkoutProfilesView(
+                        profiles: profiles,
+                        selection: $selectedProfile
+                    )
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Dismiss") {
+                                isSelectingProfile = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
         }
     }
     

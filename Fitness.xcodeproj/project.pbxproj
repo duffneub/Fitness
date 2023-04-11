@@ -24,6 +24,7 @@
 		17B7E19229DBC15100C79846 /* Something.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B7E19129DBC15100C79846 /* Something.swift */; };
 		17B7E19A29E3035200C79846 /* WorkoutProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B7E19929E3035200C79846 /* WorkoutProfile.swift */; };
 		17B7E19C29E303F600C79846 /* Sensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B7E19B29E303F600C79846 /* Sensor.swift */; };
+		17B7E1A029E5977600C79846 /* WorkoutProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B7E19F29E5977600C79846 /* WorkoutProfilesView.swift */; };
 		17C49E4429D5CD3F000143EC /* Peripheral.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C49E4329D5CD3F000143EC /* Peripheral.swift */; };
 		17D3DCF629C9EF6E00D48A45 /* SensorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D3DCF529C9EF6E00D48A45 /* SensorStore.swift */; };
 		17D3DCF929C9EFEF00D48A45 /* BluetoothStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D3DCF829C9EFEF00D48A45 /* BluetoothStore.swift */; };
@@ -68,6 +69,7 @@
 		17B7E19129DBC15100C79846 /* Something.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Something.swift; sourceTree = "<group>"; };
 		17B7E19929E3035200C79846 /* WorkoutProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfile.swift; sourceTree = "<group>"; };
 		17B7E19B29E303F600C79846 /* Sensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sensor.swift; sourceTree = "<group>"; };
+		17B7E19F29E5977600C79846 /* WorkoutProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfilesView.swift; sourceTree = "<group>"; };
 		17C49E4329D5CD3F000143EC /* Peripheral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Peripheral.swift; sourceTree = "<group>"; };
 		17D3DCF529C9EF6E00D48A45 /* SensorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorStore.swift; sourceTree = "<group>"; };
 		17D3DCF829C9EFEF00D48A45 /* BluetoothStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothStore.swift; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 				17EA1D96293A4D9E0065470B /* Fitness.entitlements */,
 				17EA1D8D292ED7C70065470B /* Info.plist */,
 				1787B53729B77F26004B7AB9 /* FitnessApp.swift */,
+				17B7E19F29E5977600C79846 /* WorkoutProfilesView.swift */,
 				17B7E19829E3032000C79846 /* Workout */,
 				17B7E19629E301D100C79846 /* WorkoutSession */,
 				17B7E19529E301C500C79846 /* Workout History */,
@@ -357,6 +360,7 @@
 				17B7E18C29DBC05800C79846 /* Workout.swift in Sources */,
 				175AE9B229C5F78D000B8C27 /* WorkoutDetailsView.swift in Sources */,
 				17B7E18A29DBC00100C79846 /* WorkoutSession.swift in Sources */,
+				17B7E1A029E5977600C79846 /* WorkoutProfilesView.swift in Sources */,
 				1787B53829B77F26004B7AB9 /* FitnessApp.swift in Sources */,
 				1771843529C0AC550052CA5C /* WorkoutHistoryView.swift in Sources */,
 			);
