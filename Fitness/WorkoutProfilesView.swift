@@ -80,18 +80,32 @@ extension WorkoutProfilesView.Row {
 
 struct WorkoutProfilesView_Previews: PreviewProvider {
     
-    static let profiles: [WorkoutProfile] = [
-        .init(activity: .outdoorRide),
-        .init(activity: .indoorRide),
-        .init(activity: .outdoorRun),
-    ]
-    
     static var previews: some View {
         NavigationStack {
             WorkoutProfilesView(
-                profiles: profiles,
-                selection: .constant(profiles.first!)
+                profiles: .preview,
+                selection: .constant([WorkoutProfile].preview.first!)
             )
         }
+        
+        VStack {
+            Button("Change Workout") {}
+        }
+        .sheet(isPresented: .constant(true)) {
+            NavigationStack {
+                WorkoutProfilesView(
+                    profiles: .preview,
+                    selection: .constant([WorkoutProfile].preview.first!)
+                )
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Dismiss") {}
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .previewDisplayName("As Sheet")
     }
 }

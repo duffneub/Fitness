@@ -20,3 +20,15 @@ struct WorkoutProfile: Identifiable {
 }
 
 extension WorkoutProfile: Equatable {}
+
+// MARK: - Preview Helpers
+
+extension [WorkoutProfile] {
+    
+    static let preview: [WorkoutProfile] = [
+        .init(activity: .outdoorRide),
+        .init(activity: .indoorRide),
+        .init(activity: .outdoorRun),
+    ]
+    
+}
